@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Play, Trash2, Users, ChevronRight, Loader, Hourglass } from 'lucide-react';
 import { useWebSocket } from '../../shared/hooks/useWebSocket';
+import { useClearSEO } from '../../shared/hooks/useClearSEO';
 import type { RoomState } from '../../shared/types';
 import { GameNavbar } from '../navbar/GameNavbar';
 import { RoomCode } from '../components/RoomCode';
@@ -17,6 +18,7 @@ type LocationState = {
 };
 
 export function GameRoomPage() {
+  useClearSEO();
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as LocationState | null;

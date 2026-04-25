@@ -2,6 +2,7 @@ import { Layers, Flame, Sparkles } from 'lucide-react';
 import { HomeNavbar } from '../navbar/HomeNavbar';
 import { GameCard } from '../components/GameCard';
 import { Footer } from '../../shared/components/Footer';
+import { SEOStructuredData } from '../../shared/components/SEOStructuredData';
 
 const GAMES = [
   {
@@ -21,6 +22,7 @@ const GAMES = [
 export function HomePage() {
   return (
     <div className="min-h-svh flex flex-col bg-[#0a0a0f] bg-grid">
+      <SEOStructuredData />
       <HomeNavbar />
 
       <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 lg:py-14">

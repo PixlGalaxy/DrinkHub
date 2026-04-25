@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { Users, Plus, LogIn, Flame, ChevronRight, ArrowLeft } from 'lucide-react';
 import { GameNavbar } from '../navbar/GameNavbar';
 import { Footer } from '../../shared/components/Footer';
+import { useClearSEO } from '../../shared/hooks/useClearSEO';
 
 type Mode = 'select' | 'create' | 'join';
 
 export function LobbyPage() {
+  useClearSEO();
   const navigate = useNavigate();
   const [mode, setMode] = useState<Mode>('select');
   const [playerName, setPlayerName] = useState('');
