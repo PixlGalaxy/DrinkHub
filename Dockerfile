@@ -9,7 +9,7 @@ COPY frontend/ ./
 RUN npm run build
 
 # 2 Nginx + Python (FastAPI)
-FROM python:3.12-alpine
+FROM python:3.14-alpine
 
 # System packages: nginx (serves SPA + reverse proxy), supervisor (runs both processes)
 RUN apk add --no-cache nginx supervisor curl tini && \
