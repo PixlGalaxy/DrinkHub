@@ -1,5 +1,6 @@
 from fastapi import WebSocket
 from typing import Optional
+import asyncio
 
 
 class ConnectionManager:
@@ -8,15 +9,34 @@ class ConnectionManager:
         self._connections: dict[str, WebSocket] = {}
         # room_code -> set of player_ids
         self._room_members: dict[str, set[str]] = {}
+        # player_id -> reconnection timeout task
+        self._disconnect_timers: dict[str, asyncio.Task] = {}
 
-    async def connect(self, player_id: str, websocket: WebSocket):
-        await websocket.accept()
+    async def connect(self, player_id: str, websocket: WebSocket, accept: bool = True):
+        if accept:
+            await websocket.accept()
         self._connections[player_id] = websocket
+
+        if player_id in self._disconnect_timers:
+            self._disconnect_timers[player_id].cancel()
+            del self._disconnect_timers[player_id]
 
     def disconnect(self, player_id: str):
         self._connections.pop(player_id, None)
-        for members in self._room_members.values():
-            members.discard(player_id)
+
+        if player_id not in self._disconnect_timers:
+            task = asyncio.create_task(self._schedule_full_disconnect(player_id))
+            self._disconnect_timers[player_id] = task
+
+    async def _schedule_full_disconnect(self, player_id: str):
+        try:
+            await asyncio.sleep(120)  # 2 minutes
+            for members in self._room_members.values():
+                members.discard(player_id)
+            if player_id in self._disconnect_timers:
+                del self._disconnect_timers[player_id]
+        except asyncio.CancelledError:
+            pass
 
     def join_room(self, room_code: str, player_id: str):
         if room_code not in self._room_members:
@@ -32,6 +52,9 @@ class ConnectionManager:
             if player_id in members:
                 return code
         return None
+
+    def is_player_in_room(self, player_id: str) -> bool:
+        return self.get_room_for_player(player_id) is not None
 
     async def send_to(self, player_id: str, message: dict):
         ws = self._connections.get(player_id)

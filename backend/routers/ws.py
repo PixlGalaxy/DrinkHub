@@ -19,14 +19,31 @@ async def _broadcast_state(room_code: str, viewer_id: str = ""):
 
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    player_id = str(uuid.uuid4())
-    await manager.connect(player_id, websocket)
+    await websocket.accept()
+    player_id: str = ""
     room_code: str = ""
 
     try:
         while True:
             data = await websocket.receive_json()
             msg_type = data.get("type", "")
+
+            if msg_type == "identify":
+                player_id = data.get("player_id", str(uuid.uuid4()))
+                await manager.connect(player_id, websocket, accept=False)
+                prev_room_code = manager.get_room_for_player(player_id)
+                if prev_room_code:
+                    room_code = prev_room_code
+                    room = room_svc.get_room(room_code)
+                    if room:
+                        player = room.get_player_by_id(player_id)
+                        if player:
+                            player.is_connected = True
+                            await _broadcast_state(room_code)
+                continue
+
+            if not player_id:
+                continue
 
             if msg_type == "create_room":
                 game_id = data.get("game_id", "sipit-or-dipit")

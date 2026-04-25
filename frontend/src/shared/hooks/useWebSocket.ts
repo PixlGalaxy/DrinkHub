@@ -1,9 +1,24 @@
 import { useCallback, useRef, useState } from 'react';
 import type { WsStatus } from '../types';
 
+const PLAYER_ID_COOKIE = 'drinkhub_player_id';
+
 function getWsUrl(): string {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   return `${protocol}//${window.location.host}/ws`;
+}
+
+function getOrCreatePlayerId(): string {
+  const existing = document.cookie
+    .split('; ')
+    .find(row => row.startsWith(PLAYER_ID_COOKIE + '='))
+    ?.split('=')[1];
+
+  if (existing) return existing;
+
+  const newId = crypto.randomUUID();
+  document.cookie = `${PLAYER_ID_COOKIE}=${newId}; path=/; max-age=2592000`;
+  return newId;
 }
 
 type Handler = (data: Record<string, unknown>) => void;
@@ -13,6 +28,7 @@ export function useWebSocket() {
   const [status, setStatus] = useState<WsStatus>('idle');
   const handlers = useRef<Map<string, Handler>>(new Map());
   const pendingMessages = useRef<object[]>([]);
+  const playerId = useRef<string>(getOrCreatePlayerId());
 
   const on = useCallback((type: string, handler: Handler) => {
     handlers.current.set(type, handler);
@@ -40,9 +56,9 @@ export function useWebSocket() {
     ws.current = socket;
 
     socket.onopen = () => {
-      // Only update if this is still the current socket
       if (ws.current !== socket) return;
       setStatus('connected');
+      socket.send(JSON.stringify({ type: 'identify', player_id: playerId.current }));
       pendingMessages.current.forEach(msg => socket.send(JSON.stringify(msg)));
       pendingMessages.current = [];
     };
@@ -66,7 +82,6 @@ export function useWebSocket() {
         const wildcard = handlers.current.get('*');
         if (wildcard) wildcard(msg);
       } catch {
-        // ignore malformed messages
       }
     };
   }, []);
@@ -80,10 +95,5 @@ export function useWebSocket() {
     pendingMessages.current = [];
     setStatus('idle');
   }, []);
-
-  // No automatic cleanup. The caller manages disconnect() explicitly to avoid
-  // StrictMode double-mount killing a connection that hasn't finished its handshake.
-  // The browser will GC any orphaned sockets when the tab closes.
-
   return { connect, disconnect, send, on, off, status };
 }
