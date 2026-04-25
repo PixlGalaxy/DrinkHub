@@ -1,5 +1,5 @@
 # 1 Build the React frontend
-FROM node:24-alpine AS build-frontend
+FROM node:25-alpine AS build-frontend
 WORKDIR /app/frontend
 
 COPY frontend/package.json frontend/package-lock.json* ./
@@ -9,7 +9,7 @@ COPY frontend/ ./
 RUN npm run build
 
 # 2 Nginx + Python (FastAPI)
-FROM python:3.12-alpine
+FROM python:3.14-alpine
 
 # System packages: nginx (serves SPA + reverse proxy), supervisor (runs both processes)
 RUN apk add --no-cache nginx supervisor curl tini && \
