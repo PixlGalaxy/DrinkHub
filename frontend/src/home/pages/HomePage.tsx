@@ -13,7 +13,7 @@ const GAMES = [
     accentColor: 'bg-amber-500',
     gradientColor: 'from-amber-500 to-orange-600',
     badgeText: 'Card Game',
-    players: '2–10 players',
+    players: 'Multiplayer',
     tags: ['Challenges', 'Truth', 'Rules', 'Penalties'],
     available: true,
   },
@@ -79,11 +79,11 @@ export function HomePage() {
           <div className="border-t border-white/5 pt-8">
             <div className="grid grid-cols-3 gap-6 max-w-2xl">
               <div>
-                <p className="text-yellow-400 text-2xl lg:text-3xl font-black">100+</p>
-                <p className="text-white/40 text-xs lg:text-sm mt-1">Cards in SipIt Or DipIt</p>
+                <p className="text-yellow-400 text-2xl lg:text-3xl font-black">Free</p>
+                <p className="text-white/40 text-xs lg:text-sm mt-1">No signup required</p>
               </div>
               <div>
-                <p className="text-yellow-400 text-2xl lg:text-3xl font-black">2-10</p>
+                <p className="text-yellow-400 text-2xl lg:text-3xl font-black">Multi</p>
                 <p className="text-white/40 text-xs lg:text-sm mt-1">Players per room</p>
               </div>
               <div>

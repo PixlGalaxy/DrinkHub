@@ -7,9 +7,10 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from routers.ws import router as ws_router
-from services.room_service import cleanup_expired_rooms, get_all_rooms, hydrate_rooms
+from services.room_service import cleanup_expired_rooms, cleanup_disconnected_players, get_all_rooms, hydrate_rooms
 from services.persistence import load_rooms, save_rooms
 from games.registry import list_games
+from websocket.manager import manager
 
 load_dotenv()
 
@@ -26,8 +27,11 @@ async def lifespan(_app: FastAPI):
 
     async def cleanup_loop():
         while True:
-            await asyncio.sleep(60)
-            cleanup_expired_rooms()
+            await asyncio.sleep(30)
+            expired = cleanup_expired_rooms()
+            removed = cleanup_disconnected_players()
+            for code in expired + removed:
+                manager.cleanup_room(code)
 
     async def save_loop():
         while True:

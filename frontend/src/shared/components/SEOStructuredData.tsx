@@ -14,7 +14,7 @@ export function SEOStructuredData() {
       meta.setAttribute('content', content);
     };
 
-    setMeta('description', 'Play multiplayer party games online. DrinkHub features SipIt Or DipIt with 100+ cards. Perfect for game nights, pregames, and hangouts.');
+    setMeta('description', 'Play multiplayer party games online. DrinkHub features SipIt Or DipIt and more. Perfect for game nights, pregames, and hangouts.');
     setMeta('keywords', 'party games, multiplayer games, card games, drinking games, game night, online games');
     setMeta('author', 'PixlGalaxy');
 
@@ -28,7 +28,7 @@ export function SEOStructuredData() {
     // Twitter Card
     setMeta('twitter:card', 'summary_large_image');
     setMeta('twitter:title', 'DrinkHub - Multiplayer Party Games');
-    setMeta('twitter:description', 'Play multiplayer party games online. SipIt Or DipIt with 100+ cards.');
+    setMeta('twitter:description', 'Play multiplayer party games online with SipIt Or DipIt and more.');
     setMeta('twitter:image', 'https://drinkhub.net/og-image.svg');
 
     // Canonical URL
@@ -62,13 +62,12 @@ export function SEOStructuredData() {
     "@context": "https://schema.org",
     "@type": "VideoGame",
     "name": "SipIt Or DipIt",
-    "description": "A multiplayer party card game with 100+ cards including challenges, truths, rules, and penalties",
+    "description": "A multiplayer party card game with challenges, truths, rules, and penalties",
     "url": "https://drinkhub.net/sipit-or-dipit",
-    "gameReleaseDate": "2024",
+    "gameReleaseDate": "2026",
     "numberPlayers": {
       "@type": "QuantitativeValue",
-      "minValue": 2,
-      "maxValue": 10
+      "minValue": 2
     },
     "applicationCategory": "Game",
     "operatingSystem": "Web"

@@ -200,12 +200,11 @@ export function PlayingCard({ card }: PlayingCardProps) {
 
 /* ── Deck placeholder (no card drawn yet) ── */
 interface DeckProps {
-  remaining: number;
   isMyTurn: boolean;
   onDraw: () => void;
 }
 
-export function CardDeck({ remaining, isMyTurn, onDraw }: DeckProps) {
+export function CardDeck({ isMyTurn, onDraw }: DeckProps) {
   return (
     <div className="w-full max-w-[340px] sm:max-w-sm md:max-w-md mx-auto flex flex-col items-center gap-4">
       {/* Stacked deck visual */}
@@ -234,7 +233,6 @@ export function CardDeck({ remaining, isMyTurn, onDraw }: DeckProps) {
                   <p className="text-white font-black text-2xl sm:text-3xl md:text-4xl tracking-tight leading-none">SipIt</p>
                   <p className="text-yellow-400 font-black text-2xl sm:text-3xl md:text-4xl tracking-tight leading-none mt-1">Or DipIt</p>
                 </div>
-                <p className="text-white/30 text-xs sm:text-sm">{remaining} cards remaining</p>
 
                 {isMyTurn && (
                   <button

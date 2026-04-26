@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Play, Trash2, Users, ChevronRight, Loader, Hourglass } from 'lucide-react';
+import { Play, Trash2, Users, ChevronRight, Loader, Hourglass, RotateCcw } from 'lucide-react';
 import { useWebSocket } from '../../shared/hooks/useWebSocket';
 import { useClearSEO } from '../../shared/hooks/useClearSEO';
 import type { RoomState } from '../../shared/types';
@@ -10,6 +10,8 @@ import { PlayerList } from '../components/PlayerList';
 import { PlayingCard, CardDeck } from '../components/PlayingCard';
 import { ActiveRules } from '../components/ActiveRules';
 
+const SESSION_KEY = 'dh_active_session';
+
 type LocationState = {
   action: 'create' | 'join';
   playerName: string;
@@ -17,11 +19,52 @@ type LocationState = {
   gameId: string;
 };
 
+type StoredSession = {
+  roomCode: string;
+  playerName: string;
+  gameId: string;
+};
+
+function saveSession(session: StoredSession) {
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  } catch {}
+}
+
+function loadSession(): StoredSession | null {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    return raw ? JSON.parse(raw) as StoredSession : null;
+  } catch {
+    return null;
+  }
+}
+
+function clearSession() {
+  try {
+    localStorage.removeItem(SESSION_KEY);
+  } catch {}
+}
+
 export function GameRoomPage() {
   useClearSEO();
   const navigate = useNavigate();
   const location = useLocation();
-  const state = location.state as LocationState | null;
+  const passedState = location.state as LocationState | null;
+
+  const [state] = useState<LocationState | null>(() => {
+    if (passedState) return passedState;
+    const stored = loadSession();
+    if (stored) {
+      return {
+        action: 'join',
+        playerName: stored.playerName,
+        roomCode: stored.roomCode,
+        gameId: stored.gameId,
+      };
+    }
+    return null;
+  });
 
   const { connect, disconnect, send, on, status } = useWebSocket();
   const [room, setRoom] = useState<RoomState | null>(null);
@@ -35,8 +78,16 @@ export function GameRoomPage() {
   const handleLeave = useCallback(() => {
     send({ type: 'leave_room' });
     disconnect();
+    clearSession();
     navigate('/sipit-or-dipit', { replace: true });
   }, [send, disconnect, navigate]);
+
+  const handleRejoin = useCallback(() => {
+    if (!state) return;
+    actionSent.current = false;
+    setErrorMsg('');
+    connect();
+  }, [state, connect]);
 
   const handleDelete = useCallback(() => send({ type: 'delete_room' }), [send]);
   const handleStartGame = useCallback(() => send({ type: 'start_game' }), [send]);
@@ -48,13 +99,22 @@ export function GameRoomPage() {
       const data = msg as unknown as RoomState & { type: string };
       setRoom(data);
       setErrorMsg('');
+
+      if (state) {
+        saveSession({
+          roomCode: data.room_code,
+          playerName: state.playerName,
+          gameId: data.game_id,
+        });
+      }
     });
     on('error', (msg) => setErrorMsg((msg.message as string) || 'Something went wrong.'));
     on('room_deleted', () => {
       disconnect();
+      clearSession();
       navigate('/sipit-or-dipit', { replace: true, state: { deleted: true } });
     });
-  }, [on, disconnect, navigate]);
+  }, [on, disconnect, navigate, state]);
 
   useEffect(() => {
     if (!state) return;
@@ -98,13 +158,28 @@ export function GameRoomPage() {
         <GameNavbar />
         <div className="flex-1 flex flex-col items-center justify-center gap-4 px-4">
           <p className="text-white/60 text-center text-base sm:text-lg">Connection lost.</p>
-          <button
-            onClick={() => navigate('/sipit-or-dipit', { replace: true })}
-            className="bg-yellow-400 hover:bg-yellow-300 text-black font-bold px-6 py-3
-                       rounded-xl transition-all active:scale-95"
-          >
-            Back to Lobby
-          </button>
+          <p className="text-white/40 text-center text-sm">Reconnecting automatically...</p>
+          <div className="flex gap-3 mt-2">
+            <button
+              onClick={handleRejoin}
+              className="flex items-center gap-2 bg-yellow-400 hover:bg-yellow-300 text-black font-bold px-6 py-3
+                         rounded-xl transition-all active:scale-95"
+            >
+              <RotateCcw size={16} strokeWidth={2.5} />
+              Re-join
+            </button>
+            <button
+              onClick={() => {
+                clearSession();
+                disconnect();
+                navigate('/sipit-or-dipit', { replace: true });
+              }}
+              className="bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 font-semibold px-6 py-3
+                         rounded-xl transition-all active:scale-95"
+            >
+              Back to Lobby
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -156,7 +231,6 @@ export function GameRoomPage() {
                     Players ({connectedPlayers.length})
                   </span>
                 </div>
-                <span className="text-white/30 text-xs">{connectedPlayers.length}/10 max</span>
               </div>
 
               <PlayerList players={room.players} viewerId={room.viewer_id} />
@@ -251,7 +325,7 @@ export function GameRoomPage() {
                   </p>
                 )}
                 <p className="text-white/30 text-xs sm:text-sm mt-0.5">
-                  {room.deck_remaining} cards left · {room.active_rules.length} active rules
+                  {room.active_rules.length} active rules
                 </p>
               </div>
 
@@ -294,7 +368,6 @@ export function GameRoomPage() {
                 </div>
               ) : (
                 <CardDeck
-                  remaining={room.deck_remaining}
                   isMyTurn={isMyTurn && !room.card_drawn}
                   onDraw={handleDrawCard}
                 />

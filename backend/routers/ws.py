@@ -31,15 +31,13 @@ async def websocket_endpoint(websocket: WebSocket):
             if msg_type == "identify":
                 player_id = data.get("player_id", str(uuid.uuid4()))
                 await manager.connect(player_id, websocket, accept=False)
-                prev_room_code = manager.get_room_for_player(player_id)
-                if prev_room_code:
-                    room_code = prev_room_code
-                    room = room_svc.get_room(room_code)
-                    if room:
-                        player = room.get_player_by_id(player_id)
-                        if player:
-                            player.is_connected = True
-                            await _broadcast_state(room_code)
+                for code, room in room_svc.get_all_rooms().items():
+                    if room.get_player_by_id(player_id):
+                        room_code = code
+                        manager.join_room(room_code, player_id)
+                        room_svc.mark_reconnected(room, player_id)
+                        await _broadcast_state(room_code)
+                        break
                 continue
 
             if not player_id:
@@ -131,7 +129,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     if room:
                         room_svc.remove_player(room, player_id)
                         manager.leave_room(room_code, player_id)
-                        if not any(p.is_connected for p in room.players):
+                        if not room.players:
                             room_svc.delete_room(room_code)
                             manager.cleanup_room(room_code)
                         else:
@@ -139,14 +137,10 @@ async def websocket_endpoint(websocket: WebSocket):
                     room_code = ""
 
     except WebSocketDisconnect:
-        manager.disconnect(player_id)
-        if room_code:
-            room = room_svc.get_room(room_code)
-            if room:
-                room_svc.remove_player(room, player_id)
-                connected = [p for p in room.players if p.is_connected]
-                if connected:
+        if player_id:
+            manager.disconnect(player_id)
+            if room_code:
+                room = room_svc.get_room(room_code)
+                if room:
+                    room_svc.mark_disconnected(room, player_id)
                     await _broadcast_state(room_code)
-                else:
-                    room_svc.delete_room(room_code)
-                    manager.cleanup_room(room_code)

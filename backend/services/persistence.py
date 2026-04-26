@@ -62,11 +62,18 @@ def load_rooms() -> dict:
 
             players = []
             for p in raw.get("players", []):
+                disconnected_at_raw = p.get("disconnected_at")
+                disconnected_at = (
+                    datetime.fromisoformat(disconnected_at_raw)
+                    if disconnected_at_raw
+                    else now  # On restart, treat all as just disconnected (start grace period)
+                )
                 player = Player(
                     id=p["id"],
                     name=p["name"],
                     is_host=p.get("is_host", False),
                     is_connected=False,  # Always reset on restart
+                    disconnected_at=disconnected_at,
                 )
                 players.append(player)
 

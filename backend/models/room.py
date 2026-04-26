@@ -9,6 +9,7 @@ class Player:
     name: str
     is_host: bool
     is_connected: bool = True
+    disconnected_at: Optional[datetime] = None
 
 
 @dataclass
