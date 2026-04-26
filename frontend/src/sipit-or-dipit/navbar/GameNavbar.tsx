@@ -37,7 +37,7 @@ export function GameNavbar({ roomCode, onLeave }: GameNavbarProps) {
               <span className="text-[10px] sm:text-xs text-white/40 font-medium hidden sm:inline">
                 {t('nav.room', lang)}
               </span>
-              <span className="text-xs sm:text-sm font-mono font-black text-white tracking-[0.2em]">
+              <span className="text-xs sm:text-sm font-mono font-black text-white tracking-[0.1em]">
                 {roomCode}
               </span>
             </div>
