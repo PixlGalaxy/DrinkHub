@@ -13,7 +13,7 @@ _rooms: dict[str, Room] = {}
 def _generate_code() -> str:
     chars = "ABCDEFGHJKMNPQRSTVWXYZ"
     while True:
-        code = "".join(random.choices(chars, k=4))
+        code = "".join(random.choices(chars, k=6))
         if code not in _rooms:
             return code
 
