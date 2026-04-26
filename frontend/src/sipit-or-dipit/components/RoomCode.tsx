@@ -28,12 +28,12 @@ export function RoomCode({ code }: RoomCodeProps) {
       </p>
       <button
         onClick={handleCopy}
-        className="flex items-center gap-3 sm:gap-4 bg-white/5 hover:bg-white/10 active:scale-95
+        className="flex items-center gap-2 sm:gap-3 bg-white/5 hover:bg-white/10 active:scale-95
                    border-2 border-white/10 hover:border-yellow-400/40 rounded-2xl
-                   px-6 sm:px-8 py-4 sm:py-5 transition-all group"
+                   px-4 sm:px-6 py-3 sm:py-4 transition-all group"
       >
-        <span className="text-4xl sm:text-5xl lg:text-6xl font-black font-mono text-white
-                         tracking-[0.25em]">
+        <span className="text-2xl sm:text-3xl lg:text-4xl font-black font-mono text-white
+                         tracking-[0.15em]">
           {code}
         </span>
         <div className={`transition-colors ${copied ? 'text-emerald-400' : 'text-white/30 group-hover:text-yellow-400'}`}>
