@@ -1474,12 +1474,12 @@ RULE_CARDS = [
     {
         "id": "ru_14",
         "type": "rule",
-        "title": {"en": "Phone Lockdown", "es": "Sin Celulares"},
+        "title": {"en": "Stay in the Game", "es": "Permanece en el Juego"},
         "description": {
-            "en": "Absolutely no phones allowed for the next 3 rounds. Anyone caught touching their phone drinks immediately.",
-            "es": "Absolutamente prohibido el celular por las próximas 3 rondas. Quien sea cachado tocando su celular, toma de inmediato.",
+            "en": "No one can leave the SipIt Or DipIt game for the next 3 rounds. If you exit the game, you must take a shot immediately.",
+            "es": "Nadie puede salir del juego SipIt Or DipIt por las próximas 3 rondas. Si sales del juego, tomas un shot de inmediato.",
         },
-        "consequence": {"en": "Touch your phone, drink.", "es": "Tocas tu celular, tomas."},
+        "consequence": {"en": "Leave the game, take a shot.", "es": "Si sales del juego, tomas un shot."},
         "rounds": 3,
     },
     {
