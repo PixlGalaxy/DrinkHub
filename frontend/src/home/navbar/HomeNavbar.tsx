@@ -7,13 +7,14 @@ export function HomeNavbar() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between">
         <Link
           to="/"
-          className="flex items-center gap-2 text-white font-bold text-lg md:text-2xl tracking-tight"
+          className="flex items-center gap-2 sm:gap-2.5 text-white font-bold text-sm sm:text-base tracking-tight min-w-0"
         >
-          <div className="w-8 h-8 md:w-12 md:h-12 rounded-lg bg-yellow-400 flex items-center justify-center
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-yellow-400 flex items-center justify-center shrink-0
                           shadow-lg shadow-yellow-400/20">
-            <Wine size={18} className="text-black md:w-8 md:h-8" strokeWidth={2.5} />
+            <Wine size={14} className="text-black sm:hidden" strokeWidth={2.5} />
+            <Wine size={16} className="text-black hidden sm:block" strokeWidth={2.5} />
           </div>
-          DrinkHub
+          <span className="truncate">DrinkHub</span>
         </Link>
 
         {/* Desktop nav */}

@@ -83,8 +83,8 @@ export function HomePage() {
                 <p className="text-white/40 text-xs lg:text-sm mt-1">No signup required</p>
               </div>
               <div>
-                <p className="text-yellow-400 text-2xl lg:text-3xl font-black">Multi</p>
-                <p className="text-white/40 text-xs lg:text-sm mt-1">Players per room</p>
+                <p className="text-yellow-400 text-2xl lg:text-3xl font-black">Multiplayer</p>
+                <p className="text-white/40 text-xs lg:text-sm mt-1">Rooms</p>
               </div>
               <div>
                 <p className="text-yellow-400 text-2xl lg:text-3xl font-black">∞</p>
