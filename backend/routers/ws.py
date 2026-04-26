@@ -1,13 +1,32 @@
-import uuid
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from websocket.manager import manager
 import services.room_service as room_svc
+from services.security import (
+    issue_token,
+    verify_token,
+    sanitize_name,
+    sanitize_room_code,
+    sanitize_game_id,
+    rate_limiter,
+)
 
 router = APIRouter()
 
+ALLOWED_TYPES = {
+    "identify",
+    "create_room",
+    "join_room",
+    "start_game",
+    "draw_card",
+    "reveal_card",
+    "next_turn",
+    "delete_room",
+    "leave_room",
+}
 
-async def _broadcast_state(room_code: str, viewer_id: str = ""):
+
+async def _broadcast_state(room_code: str):
     room = room_svc.get_room(room_code)
     if room:
         members = list(room.players)
@@ -17,19 +36,50 @@ async def _broadcast_state(room_code: str, viewer_id: str = ""):
             await manager.send_to(player.id, state)
 
 
+async def _send_error(player_id: str, message: str):
+    await manager.send_to(player_id, {"type": "error", "message": message})
+
+
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
+    client_ip = websocket.client.host if websocket.client else "unknown"
+
+    if not rate_limiter.check("connect", client_ip):
+        await websocket.close(code=4029, reason="Too many connections")
+        return
+
     player_id: str = ""
     room_code: str = ""
 
     try:
         while True:
-            data = await websocket.receive_json()
-            msg_type = data.get("type", "")
+            try:
+                data = await websocket.receive_json()
+            except WebSocketDisconnect:
+                raise
+            except Exception:
+                continue
+
+            if not isinstance(data, dict):
+                continue
+
+            msg_type = data.get("type")
+            if not isinstance(msg_type, str) or msg_type not in ALLOWED_TYPES:
+                continue
+
+            scope_key = player_id or client_ip
+            if not rate_limiter.check("default", scope_key):
+                continue
 
             if msg_type == "identify":
-                player_id = data.get("player_id", str(uuid.uuid4()))
+                token = data.get("token")
+                verified = verify_token(token) if isinstance(token, str) else None
+                if verified:
+                    player_id = verified
+                else:
+                    player_id, new_token = issue_token()
+                    await websocket.send_json({"type": "session", "token": new_token})
                 await manager.connect(player_id, websocket, accept=False)
                 for code, room in room_svc.get_all_rooms().items():
                     if room.get_player_by_id(player_id):
@@ -44,8 +94,14 @@ async def websocket_endpoint(websocket: WebSocket):
                 continue
 
             if msg_type == "create_room":
-                game_id = data.get("game_id", "sipit-or-dipit")
-                player_name = data.get("player_name", "Player").strip()[:20]
+                if not rate_limiter.check("create_room", player_id):
+                    await _send_error(player_id, "Too many room creations. Slow down.")
+                    continue
+                game_id = sanitize_game_id(data.get("game_id", "sipit-or-dipit")) or "sipit-or-dipit"
+                player_name = sanitize_name(data.get("player_name"))
+                if not player_name:
+                    await _send_error(player_id, "Invalid name.")
+                    continue
                 room = room_svc.create_room(game_id, player_id, player_name)
                 room_code = room.code
                 manager.join_room(room_code, player_id)
@@ -54,20 +110,29 @@ async def websocket_endpoint(websocket: WebSocket):
                 await manager.send_to(player_id, state)
 
             elif msg_type == "join_room":
-                code = data.get("room_code", "").strip().upper()
-                player_name = data.get("player_name", "Player").strip()[:20]
+                if not rate_limiter.check("join_room", player_id):
+                    await _send_error(player_id, "Too many join attempts. Slow down.")
+                    continue
+                code = sanitize_room_code(data.get("room_code"))
+                player_name = sanitize_name(data.get("player_name"))
+                if not code:
+                    await _send_error(player_id, "Invalid room code.")
+                    continue
+                if not player_name:
+                    await _send_error(player_id, "Invalid name.")
+                    continue
                 room = room_svc.get_room(code)
                 if not room:
-                    await manager.send_to(player_id, {"type": "error", "message": "Room not found."})
+                    await _send_error(player_id, "Room not found.")
                     continue
                 if room.game_state.status == "playing":
                     existing = room.get_player_by_id(player_id)
                     if not existing:
-                        await manager.send_to(player_id, {"type": "error", "message": "Game already in progress."})
+                        await _send_error(player_id, "Game already in progress.")
                         continue
                 player = room_svc.add_player(room, player_id, player_name)
                 if player is None:
-                    await manager.send_to(player_id, {"type": "error", "message": "Name already taken in this room."})
+                    await _send_error(player_id, "Name already taken in this room.")
                     continue
                 room_code = code
                 manager.join_room(room_code, player_id)
@@ -79,11 +144,11 @@ async def websocket_endpoint(websocket: WebSocket):
                     continue
                 host = room.get_host()
                 if not host or host.id != player_id:
-                    await manager.send_to(player_id, {"type": "error", "message": "Only the host can start the game."})
+                    await _send_error(player_id, "Only the host can start the game.")
                     continue
                 connected = [p for p in room.players if p.is_connected]
                 if len(connected) < 2:
-                    await manager.send_to(player_id, {"type": "error", "message": "Need at least 2 players to start."})
+                    await _send_error(player_id, "Need at least 2 players to start.")
                     continue
                 room_svc.start_game(room)
                 await _broadcast_state(room_code)
@@ -94,7 +159,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     continue
                 cur = room.current_player()
                 if not cur or cur.id != player_id:
-                    await manager.send_to(player_id, {"type": "error", "message": "It's not your turn."})
+                    await _send_error(player_id, "It's not your turn.")
                     continue
                 room_svc.draw_card(room)
                 await _broadcast_state(room_code)
@@ -105,7 +170,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     continue
                 cur = room.current_player()
                 if not cur or cur.id != player_id:
-                    await manager.send_to(player_id, {"type": "error", "message": "It's not your turn."})
+                    await _send_error(player_id, "It's not your turn.")
                     continue
                 if room_svc.reveal_card(room):
                     await _broadcast_state(room_code)
@@ -116,7 +181,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     continue
                 cur = room.current_player()
                 if not cur or cur.id != player_id:
-                    await manager.send_to(player_id, {"type": "error", "message": "It's not your turn."})
+                    await _send_error(player_id, "It's not your turn.")
                     continue
                 room_svc.next_turn(room)
                 await _broadcast_state(room_code)
@@ -127,7 +192,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     continue
                 host = room.get_host()
                 if not host or host.id != player_id:
-                    await manager.send_to(player_id, {"type": "error", "message": "Only the host can delete the room."})
+                    await _send_error(player_id, "Only the host can delete the room.")
                     continue
                 await manager.broadcast_to_room(room_code, {"type": "room_deleted"})
                 room_svc.delete_room(room_code)
@@ -148,6 +213,8 @@ async def websocket_endpoint(websocket: WebSocket):
                     room_code = ""
 
     except WebSocketDisconnect:
+        pass
+    finally:
         if player_id:
             manager.disconnect(player_id)
             if room_code:
