@@ -33,7 +33,7 @@ export interface RoomState {
   host_id: string;
   host_name: string;
   players: Player[];
-  status: 'lobby' | 'playing';
+  status: 'lobby' | 'playing' | 'finished';
   current_player_id: string;
   current_player_name: string;
   current_card: Card | null;
@@ -45,3 +45,49 @@ export interface RoomState {
 }
 
 export type WsStatus = 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error';
+
+// ── Pyramid ──────────────────────────────────────────────────────────────────
+
+export interface PyramidCard {
+  rank: string | null;
+  suit: string | null;
+  image: string | null;
+  revealed: boolean;
+  row: number;
+  drinks: number;
+  position: number;
+}
+
+export interface PyramidHandCard {
+  rank: string;
+  suit: string;
+  image: string;
+  used: boolean;
+}
+
+export interface PyramidClaim {
+  claim_id: string;
+  claimer_id: string;
+  claimer_name: string;
+  target_id: string;
+  target_name: string;
+  drinks: number;
+  challenged: boolean;
+  challenger_id: string | null;
+  challenger_name: string | null;
+  resolved: boolean;
+  was_truth: boolean | null;
+}
+
+export interface PyramidData {
+  pyramid_cards: PyramidCard[];
+  current_pyramid_index: number;
+  next_votes: string[];
+  claims: PyramidClaim[];
+  total: number;
+}
+
+export interface PyramidRoomState extends RoomState {
+  pyramid_data?: PyramidData;
+  viewer_hand?: PyramidHandCard[];
+}

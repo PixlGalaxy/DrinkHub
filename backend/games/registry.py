@@ -1,6 +1,7 @@
 from typing import Callable, Optional, TypedDict
 
 from . import sipit_or_dipit
+from . import pyramid
 
 
 class GameInfo(TypedDict):
@@ -14,6 +15,11 @@ GAMES: dict[str, GameInfo] = {
         "id": sipit_or_dipit.GAME_ID,
         "name": sipit_or_dipit.GAME_NAME,
         "build_deck": sipit_or_dipit.build_deck,
+    },
+    pyramid.GAME_ID: {
+        "id": pyramid.GAME_ID,
+        "name": pyramid.GAME_NAME,
+        "build_deck": pyramid.build_deck,
     },
 }
 

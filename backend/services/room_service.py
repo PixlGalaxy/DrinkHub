@@ -102,7 +102,6 @@ def remove_player(room: Room, player_id: str):
 def start_game(room: Room):
     gs = room.game_state
     gs.status = "playing"
-    gs.deck = _build_deck(room.game_id)
     gs.discard_pile = []
     gs.current_card = None
     gs.card_drawn = False
@@ -114,6 +113,14 @@ def start_game(room: Room):
     random.shuffle(connected)
     order = {p.id: i for i, p in enumerate(connected)}
     room.players.sort(key=lambda p: order.get(p.id, 999))
+
+    if room.game_id == "pyramid":
+        from games.pyramid.service import build_pyramid_state
+        gs.game_data = build_pyramid_state(connected)
+        gs.deck = []
+    else:
+        gs.deck = _build_deck(room.game_id)
+        gs.game_data = {}
 
 
 def draw_card(room: Room) -> Optional[dict]:

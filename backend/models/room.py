@@ -22,7 +22,7 @@ class ActiveRule:
 
 @dataclass
 class GameState:
-    status: str = "lobby"  # "lobby" | "playing"
+    status: str = "lobby"  # "lobby" | "playing" | "finished"
     current_player_index: int = 0
     deck: list = field(default_factory=list)
     discard_pile: list = field(default_factory=list)
@@ -31,6 +31,7 @@ class GameState:
     card_revealed: bool = False
     active_rules: list = field(default_factory=list)
     round_number: int = 0
+    game_data: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -59,7 +60,7 @@ class Room:
         host = self.get_host()
         cur = self.current_player()
         gs = self.game_state
-        return {
+        result = {
             "room_code": self.code,
             "game_id": self.game_id,
             "host_id": host.id if host else "",
@@ -81,3 +82,34 @@ class Room:
             "deck_remaining": len(gs.deck),
             "viewer_id": viewer_id,
         }
+
+        if self.game_id == "pyramid" and gs.game_data:
+            gd = gs.game_data
+            public_pyramid_cards = []
+            for c in gd.get("pyramid_cards", []):
+                if c.get("revealed"):
+                    public_pyramid_cards.append(dict(c))
+                else:
+                    public_pyramid_cards.append({
+                        "revealed": False,
+                        "row": c.get("row", 0),
+                        "drinks": c.get("drinks", 1),
+                        "position": c.get("position", 0),
+                        "rank": None,
+                        "suit": None,
+                        "image": None,
+                    })
+            result["pyramid_data"] = {
+                "pyramid_cards": public_pyramid_cards,
+                "current_pyramid_index": gd.get("current_pyramid_index", -1),
+                "next_votes": gd.get("next_votes", []),
+                "claims": gd.get("claims", []),
+                "total": PYRAMID_SIZE,
+            }
+            player_hands = gd.get("player_hands", {})
+            result["viewer_hand"] = player_hands.get(viewer_id, [])
+
+        return result
+
+
+PYRAMID_SIZE = 10

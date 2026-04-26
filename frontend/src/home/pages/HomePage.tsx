@@ -17,6 +17,18 @@ const GAMES = [
     tags: ['Challenges', 'Truth', 'Rules', 'Penalties'],
     available: true,
   },
+  {
+    title: 'Pyramid',
+    description: 'Bluff your way through a 10-card pyramid. Claim matching cards, assign drinks, and survive the challenges — or drink double.',
+    route: '/pyramid',
+    icon: Layers,
+    accentColor: 'bg-purple-600',
+    gradientColor: 'from-purple-600 to-violet-700',
+    badgeText: 'Bluffing Game',
+    players: 'Multiplayer',
+    tags: ['Bluffing', 'Cards', 'Drinks', 'Strategy'],
+    available: true,
+  },
 ];
 
 export function HomePage() {
@@ -58,7 +70,7 @@ export function HomePage() {
           ))}
 
           {/* Coming soon placeholder cards */}
-          {[0, 1].map(i => (
+          {[0].map(i => (
             <div
               key={`soon-${i}`}
               className="fade-up bg-[#0f0f17] border border-white/5 border-dashed

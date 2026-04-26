@@ -140,7 +140,7 @@ export function GameRoomPage() {
     if (state.action === 'create') {
       send({ type: 'create_room', player_name: state.playerName, game_id: state.gameId });
     } else {
-      send({ type: 'join_room', room_code: state.roomCode, player_name: state.playerName });
+      send({ type: 'join_room', room_code: state.roomCode, player_name: state.playerName, game_id: state.gameId });
     }
   }, [status, state, send]);
 
