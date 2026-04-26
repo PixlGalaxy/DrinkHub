@@ -1,4 +1,4 @@
-import { Wine, LogOut } from 'lucide-react';
+import { Flame, LogOut } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface GameNavbarProps {
@@ -17,8 +17,8 @@ export function GameNavbar({ roomCode, onLeave }: GameNavbarProps) {
         >
           <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-yellow-400 flex items-center justify-center shrink-0
                           shadow-lg shadow-yellow-400/20">
-            <Wine size={14} className="text-black sm:hidden" strokeWidth={2.5} />
-            <Wine size={16} className="text-black hidden sm:block" strokeWidth={2.5} />
+            <Flame size={14} className="text-black sm:hidden" strokeWidth={2.5} />
+            <Flame size={16} className="text-black hidden sm:block" strokeWidth={2.5} />
           </div>
           <span className="truncate">SipIt Or DipIt</span>
         </Link>
