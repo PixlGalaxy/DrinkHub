@@ -9,6 +9,8 @@ import { RoomCode } from '../components/RoomCode';
 import { PlayerList } from '../components/PlayerList';
 import { PlayingCard, CardDeck } from '../components/PlayingCard';
 import { ActiveRules } from '../components/ActiveRules';
+import { useLanguage } from '../../shared/i18n/useLanguage';
+import { t } from '../../shared/i18n/translations';
 
 const SESSION_KEY = 'dh_active_session';
 
@@ -51,6 +53,7 @@ export function GameRoomPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const passedState = location.state as LocationState | null;
+  const [lang] = useLanguage();
 
   const [state] = useState<LocationState | null>(() => {
     if (passedState) return passedState;
@@ -92,6 +95,7 @@ export function GameRoomPage() {
   const handleDelete = useCallback(() => send({ type: 'delete_room' }), [send]);
   const handleStartGame = useCallback(() => send({ type: 'start_game' }), [send]);
   const handleDrawCard = useCallback(() => send({ type: 'draw_card' }), [send]);
+  const handleRevealCard = useCallback(() => send({ type: 'reveal_card' }), [send]);
   const handleNextTurn = useCallback(() => send({ type: 'next_turn' }), [send]);
 
   useEffect(() => {
@@ -108,13 +112,13 @@ export function GameRoomPage() {
         });
       }
     });
-    on('error', (msg) => setErrorMsg((msg.message as string) || 'Something went wrong.'));
+    on('error', (msg) => setErrorMsg((msg.message as string) || t('game.error.generic', lang)));
     on('room_deleted', () => {
       disconnect();
       clearSession();
       navigate('/sipit-or-dipit', { replace: true, state: { deleted: true } });
     });
-  }, [on, disconnect, navigate, state]);
+  }, [on, disconnect, navigate, state, lang]);
 
   useEffect(() => {
     if (!state) return;
@@ -145,7 +149,7 @@ export function GameRoomPage() {
         <div className="flex-1 flex flex-col items-center justify-center gap-4 px-4">
           <Loader size={32} className="text-yellow-400 animate-spin" strokeWidth={2} />
           <p className="text-white/50 text-sm sm:text-base">
-            {status === 'connecting' ? 'Connecting to room...' : 'Loading...'}
+            {status === 'connecting' ? t('game.connecting', lang) : t('game.loading', lang)}
           </p>
         </div>
       </div>
@@ -157,8 +161,8 @@ export function GameRoomPage() {
       <div className="min-h-svh flex flex-col bg-[#0a0a0f]">
         <GameNavbar />
         <div className="flex-1 flex flex-col items-center justify-center gap-4 px-4">
-          <p className="text-white/60 text-center text-base sm:text-lg">Connection lost.</p>
-          <p className="text-white/40 text-center text-sm">Reconnecting automatically...</p>
+          <p className="text-white/60 text-center text-base sm:text-lg">{t('game.connection_lost', lang)}</p>
+          <p className="text-white/40 text-center text-sm">{t('game.reconnecting', lang)}</p>
           <div className="flex gap-3 mt-2">
             <button
               onClick={handleRejoin}
@@ -166,7 +170,7 @@ export function GameRoomPage() {
                          rounded-xl transition-all active:scale-95"
             >
               <RotateCcw size={16} strokeWidth={2.5} />
-              Re-join
+              {t('game.rejoin', lang)}
             </button>
             <button
               onClick={() => {
@@ -177,7 +181,7 @@ export function GameRoomPage() {
               className="bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 font-semibold px-6 py-3
                          rounded-xl transition-all active:scale-95"
             >
-              Back to Lobby
+              {t('game.back_to_lobby', lang)}
             </button>
           </div>
         </div>
@@ -203,7 +207,7 @@ export function GameRoomPage() {
                              p-6 sm:p-8 flex flex-col items-center">
                 <RoomCode code={room.room_code} />
                 <p className="text-center text-white/30 text-xs sm:text-sm mt-4 max-w-[240px]">
-                  Share this code with your friends so they can join the game
+                  {t('game.share_code', lang)}
                 </p>
               </div>
 
@@ -212,11 +216,11 @@ export function GameRoomPage() {
                              rounded-2xl px-5 py-4 items-center gap-3">
                 <Hourglass size={18} className="text-yellow-400 shrink-0" strokeWidth={2} />
                 <div>
-                  <p className="text-yellow-400 font-bold text-sm">Waiting for players</p>
+                  <p className="text-yellow-400 font-bold text-sm">{t('game.waiting_for_players', lang)}</p>
                   <p className="text-yellow-400/60 text-xs mt-0.5">
                     {connectedPlayers.length < 2
-                      ? `Need ${2 - connectedPlayers.length} more to start`
-                      : 'Ready to start!'}
+                      ? t('game.need_more_to_start', lang, { count: 2 - connectedPlayers.length })
+                      : t('game.ready_to_start', lang)}
                   </p>
                 </div>
               </div>
@@ -228,7 +232,7 @@ export function GameRoomPage() {
                 <div className="flex items-center gap-2">
                   <Users size={14} className="text-white/40" strokeWidth={2} />
                   <span className="text-white/40 text-xs sm:text-sm font-bold uppercase tracking-widest">
-                    Players ({connectedPlayers.length})
+                    {t('game.players', lang)} ({connectedPlayers.length})
                   </span>
                 </div>
               </div>
@@ -254,7 +258,7 @@ export function GameRoomPage() {
                                 transition-all shadow-lg shadow-yellow-400/20"
                     >
                       <Play size={18} strokeWidth={2.5} />
-                      {connectedPlayers.length < 2 ? 'Waiting for more players...' : 'Start Game'}
+                      {connectedPlayers.length < 2 ? t('game.waiting_for_more', lang) : t('game.start_game', lang)}
                     </button>
 
                     <button
@@ -264,13 +268,17 @@ export function GameRoomPage() {
                                 transition-all border border-red-500/20 text-sm"
                     >
                       <Trash2 size={15} strokeWidth={2} />
-                      Delete Room
+                      {t('game.delete_room', lang)}
                     </button>
                   </>
                 ) : (
                   <div className="bg-white/4 border border-white/5 rounded-xl px-4 py-4 text-center">
                     <p className="text-white/60 text-sm">
-                      Waiting for <span className="text-white font-bold">{room.host_name}</span> to start
+                      {(() => {
+                        const text = t('game.waiting_for_host', lang, { host: '__HOST__' });
+                        const [before, after] = text.split('__HOST__');
+                        return (<>{before}<span className="text-white font-bold">{room.host_name}</span>{after}</>);
+                      })()}
                     </p>
                   </div>
                 )}
@@ -299,7 +307,7 @@ export function GameRoomPage() {
               <div className="flex items-center gap-2 mb-3">
                 <Users size={13} className="text-white/40" strokeWidth={2} />
                 <span className="text-white/40 text-xs font-bold uppercase tracking-widest">
-                  Players ({connectedPlayers.length})
+                  {t('game.players', lang)} ({connectedPlayers.length})
                 </span>
               </div>
               <PlayerList
@@ -318,14 +326,18 @@ export function GameRoomPage() {
             <div className="flex items-center justify-between fade-up">
               <div className="min-w-0">
                 {isMyTurn ? (
-                  <p className="text-yellow-400 font-black text-xl sm:text-2xl">Your turn!</p>
+                  <p className="text-yellow-400 font-black text-xl sm:text-2xl">{t('game.your_turn', lang)}</p>
                 ) : (
                   <p className="text-white/60 text-base sm:text-lg truncate">
-                    <span className="text-white font-bold">{room.current_player_name}</span>'s turn
+                    {(() => {
+                      const text = t('game.current_turn', lang, { name: '__NAME__' });
+                      const [before, after] = text.split('__NAME__');
+                      return (<>{before}<span className="text-white font-bold">{room.current_player_name}</span>{after}</>);
+                    })()}
                   </p>
                 )}
                 <p className="text-white/30 text-xs sm:text-sm mt-0.5">
-                  {room.active_rules.length} active rules
+                  {t('game.active_rules_count', lang, { count: room.active_rules.length })}
                 </p>
               </div>
 
@@ -364,7 +376,12 @@ export function GameRoomPage() {
             <div className="flex-1 flex flex-col justify-center py-2 sm:py-4">
               {room.current_card && room.card_drawn ? (
                 <div key={room.current_card.id}>
-                  <PlayingCard card={room.current_card} />
+                  <PlayingCard
+                    card={room.current_card}
+                    revealed={room.card_revealed}
+                    canReveal={isMyTurn && !room.card_revealed}
+                    onReveal={handleRevealCard}
+                  />
                 </div>
               ) : (
                 <CardDeck
@@ -384,28 +401,41 @@ export function GameRoomPage() {
 
             {/* Bottom actions */}
             <div className="fade-up">
-              {isMyTurn && room.card_drawn && (
+              {isMyTurn && room.card_drawn && room.card_revealed && (
                 <button
                   onClick={handleNextTurn}
                   className="w-full flex items-center justify-center gap-2 bg-yellow-400 hover:bg-yellow-300
                             active:scale-[0.98] text-black font-bold px-5 py-4 sm:py-5
                             rounded-xl text-base sm:text-lg transition-all shadow-lg shadow-yellow-400/20"
                 >
-                  Next Turn
+                  {t('game.next_turn', lang)}
                   <ChevronRight size={18} strokeWidth={2.5} />
                 </button>
               )}
 
+              {isMyTurn && room.card_drawn && !room.card_revealed && (
+                <p className="text-center text-white/30 text-sm py-2">
+                  {t('game.tap_to_reveal', lang)}
+                </p>
+              )}
+
               {isMyTurn && !room.card_drawn && (
                 <p className="text-center text-white/30 text-sm py-2">
-                  Tap the deck to draw your card
+                  {t('game.tap_to_draw', lang)}
                 </p>
               )}
 
               {!isMyTurn && (
                 <div className="bg-white/4 border border-white/5 rounded-xl px-4 py-3 sm:py-4 text-center">
                   <p className="text-white/40 text-sm">
-                    Waiting for <span className="text-white/80 font-bold">{room.current_player_name}</span>...
+                    {(() => {
+                      const key = (room.card_drawn && !room.card_revealed)
+                        ? 'game.waiting_to_reveal'
+                        : 'game.waiting_for_player';
+                      const text = t(key, lang, { name: '__NAME__' });
+                      const [before, after] = text.split('__NAME__');
+                      return (<>{before}<span className="text-white/80 font-bold">{room.current_player_name}</span>{after}</>);
+                    })()}
                   </p>
                 </div>
               )}
@@ -419,8 +449,8 @@ export function GameRoomPage() {
             ) : (
               <div className="bg-white/4 border border-white/5 border-dashed rounded-xl
                              p-6 text-center">
-                <p className="text-white/30 text-sm">No active rules</p>
-                <p className="text-white/20 text-xs mt-1">Rules from cards appear here</p>
+                <p className="text-white/30 text-sm">{t('game.no_active_rules', lang)}</p>
+                <p className="text-white/20 text-xs mt-1">{t('game.rules_appear_here', lang)}</p>
               </div>
             )}
           </aside>

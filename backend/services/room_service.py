@@ -106,6 +106,7 @@ def start_game(room: Room):
     gs.discard_pile = []
     gs.current_card = None
     gs.card_drawn = False
+    gs.card_revealed = False
     gs.active_rules = []
     gs.round_number = 1
     connected = [p for p in room.players if p.is_connected]
@@ -128,7 +129,16 @@ def draw_card(room: Room) -> Optional[dict]:
     card = gs.deck.pop(0)
     gs.current_card = card
     gs.card_drawn = True
+    gs.card_revealed = False
     return card
+
+
+def reveal_card(room: Room) -> bool:
+    gs = room.game_state
+    if gs.card_drawn and not gs.card_revealed:
+        gs.card_revealed = True
+        return True
+    return False
 
 
 def next_turn(room: Room):
@@ -144,6 +154,7 @@ def next_turn(room: Room):
         gs.discard_pile.append(gs.current_card)
     gs.current_card = None
     gs.card_drawn = False
+    gs.card_revealed = False
     connected = [p for p in room.players if p.is_connected]
     if connected:
         gs.current_player_index = (gs.current_player_index + 1) % len(connected)

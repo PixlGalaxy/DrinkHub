@@ -1,5 +1,7 @@
 import { Crown, Wifi, WifiOff } from 'lucide-react';
 import type { Player } from '../../shared/types';
+import { useLanguage } from '../../shared/i18n/useLanguage';
+import { t } from '../../shared/i18n/translations';
 
 interface PlayerListProps {
   players: Player[];
@@ -9,6 +11,8 @@ interface PlayerListProps {
 }
 
 export function PlayerList({ players, currentPlayerId, viewerId, compact = false }: PlayerListProps) {
+  const [lang] = useLanguage();
+
   return (
     <div className={compact ? 'flex flex-col gap-1.5' : 'flex flex-col gap-2'}>
       {players.map(player => {
@@ -44,7 +48,7 @@ export function PlayerList({ players, currentPlayerId, viewerId, compact = false
                     {player.name}
                   </span>
                   {isMe && (
-                    <span className="text-xs text-white/30 shrink-0">(you)</span>
+                    <span className="text-xs text-white/30 shrink-0">{t('player.you', lang)}</span>
                   )}
                 </div>
               </div>
@@ -54,7 +58,7 @@ export function PlayerList({ players, currentPlayerId, viewerId, compact = false
               {isCurrentTurn && (
                 <span className="text-[10px] sm:text-xs font-bold text-yellow-400 bg-yellow-400/20
                                  px-2 py-0.5 rounded-full uppercase tracking-wider">
-                  Turn
+                  {t('player.turn', lang)}
                 </span>
               )}
               {player.is_host && (

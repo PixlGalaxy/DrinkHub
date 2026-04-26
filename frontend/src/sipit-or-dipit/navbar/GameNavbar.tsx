@@ -1,5 +1,8 @@
 import { Flame, LogOut } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useLanguage } from '../../shared/i18n/useLanguage';
+import { t } from '../../shared/i18n/translations';
+import { FlagToggle } from '../../shared/i18n/FlagIcon';
 
 interface GameNavbarProps {
   roomCode?: string;
@@ -7,6 +10,8 @@ interface GameNavbarProps {
 }
 
 export function GameNavbar({ roomCode, onLeave }: GameNavbarProps) {
+  const [lang, setLang] = useLanguage();
+
   return (
     <header className="sticky top-0 z-50 bg-[#0a0a0f]/85 backdrop-blur-xl border-b border-white/5">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between">
@@ -24,10 +29,14 @@ export function GameNavbar({ roomCode, onLeave }: GameNavbarProps) {
         </Link>
 
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <FlagToggle value={lang} onChange={setLang} variant="pill" size="sm" />
+
           {roomCode && (
             <div className="flex items-center gap-1.5 bg-white/5 hover:bg-white/8 transition-colors
                             border border-white/10 rounded-lg px-2.5 sm:px-3 py-1.5">
-              <span className="text-[10px] sm:text-xs text-white/40 font-medium hidden sm:inline">Room</span>
+              <span className="text-[10px] sm:text-xs text-white/40 font-medium hidden sm:inline">
+                {t('nav.room', lang)}
+              </span>
               <span className="text-xs sm:text-sm font-mono font-black text-white tracking-[0.2em]">
                 {roomCode}
               </span>
@@ -39,8 +48,8 @@ export function GameNavbar({ roomCode, onLeave }: GameNavbarProps) {
               className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-white/5 hover:bg-red-500/15 hover:text-red-400
                          flex items-center justify-center text-white/50 transition-all
                          active:scale-95"
-              aria-label="Leave room"
-              title="Leave room"
+              aria-label={t('nav.leave', lang)}
+              title={t('nav.leave', lang)}
             >
               <LogOut size={15} strokeWidth={2} />
             </button>

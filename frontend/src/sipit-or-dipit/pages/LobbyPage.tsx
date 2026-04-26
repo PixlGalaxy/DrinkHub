@@ -4,12 +4,16 @@ import { Users, Plus, LogIn, Flame, ChevronRight, ArrowLeft } from 'lucide-react
 import { GameNavbar } from '../navbar/GameNavbar';
 import { Footer } from '../../shared/components/Footer';
 import { useClearSEO } from '../../shared/hooks/useClearSEO';
+import { useLanguage } from '../../shared/i18n/useLanguage';
+import { t } from '../../shared/i18n/translations';
+import { FlagToggle } from '../../shared/i18n/FlagIcon';
 
 type Mode = 'select' | 'create' | 'join';
 
 export function LobbyPage() {
   useClearSEO();
   const navigate = useNavigate();
+  const [lang, setLang] = useLanguage();
   const [mode, setMode] = useState<Mode>('select');
   const [playerName, setPlayerName] = useState('');
   const [roomCode, setRoomCode] = useState('');
@@ -17,7 +21,7 @@ export function LobbyPage() {
 
   const handleCreate = () => {
     const name = playerName.trim();
-    if (!name) { setError('Enter your name to continue.'); return; }
+    if (!name) { setError(t('lobby.error.name_required', lang)); return; }
     sessionStorage.setItem('dh_player_name', name);
     navigate('/sipit-or-dipit/room', {
       state: { action: 'create', playerName: name, gameId: 'sipit-or-dipit' }
@@ -27,8 +31,8 @@ export function LobbyPage() {
   const handleJoin = () => {
     const name = playerName.trim();
     const code = roomCode.trim().toUpperCase();
-    if (!name) { setError('Enter your name to continue.'); return; }
-    if (code.length !== 4) { setError('Room code must be 4 characters.'); return; }
+    if (!name) { setError(t('lobby.error.name_required', lang)); return; }
+    if (code.length !== 4) { setError(t('lobby.error.code_length', lang)); return; }
     sessionStorage.setItem('dh_player_name', name);
     navigate('/sipit-or-dipit/room', {
       state: { action: 'join', playerName: name, roomCode: code, gameId: 'sipit-or-dipit' }
@@ -57,7 +61,7 @@ export function LobbyPage() {
           </h1>
           <p className="text-white/50 text-sm sm:text-base lg:text-lg leading-relaxed
                        max-w-md mx-auto text-balance">
-            Draw cards, complete challenges, answer truths — or take a sip.
+            {t('lobby.tagline', lang)}
           </p>
         </div>
 
@@ -68,7 +72,7 @@ export function LobbyPage() {
           {mode === 'select' && (
             <div className="flex flex-col gap-3">
               <p className="text-center text-white/40 text-sm mb-2">
-                Start a new room or join an existing one
+                {t('lobby.subtitle', lang)}
               </p>
 
               <button
@@ -83,8 +87,8 @@ export function LobbyPage() {
                     <Plus size={20} strokeWidth={2.5} />
                   </div>
                   <div className="text-left">
-                    <p className="text-base sm:text-lg">Create a Room</p>
-                    <p className="text-xs sm:text-sm font-medium opacity-70">Be the host</p>
+                    <p className="text-base sm:text-lg">{t('lobby.create', lang)}</p>
+                    <p className="text-xs sm:text-sm font-medium opacity-70">{t('lobby.create.subtitle', lang)}</p>
                   </div>
                 </div>
                 <ChevronRight size={20} strokeWidth={2.5} />
@@ -101,8 +105,8 @@ export function LobbyPage() {
                     <LogIn size={20} strokeWidth={2} />
                   </div>
                   <div className="text-left">
-                    <p className="text-base sm:text-lg">Join a Room</p>
-                    <p className="text-xs sm:text-sm font-medium opacity-50">Got a code?</p>
+                    <p className="text-base sm:text-lg">{t('lobby.join', lang)}</p>
+                    <p className="text-xs sm:text-sm font-medium opacity-50">{t('lobby.join.subtitle', lang)}</p>
                   </div>
                 </div>
                 <ChevronRight size={20} strokeWidth={2} />
@@ -118,19 +122,19 @@ export function LobbyPage() {
                           transition-colors -mb-1 self-start"
               >
                 <ArrowLeft size={14} strokeWidth={2} />
-                Back
+                {t('common.back', lang)}
               </button>
 
               <div>
                 <label className="text-white/50 text-xs font-bold uppercase tracking-widest block mb-2">
-                  Your Name
+                  {t('lobby.your_name', lang)}
                 </label>
                 <input
                   type="text"
                   value={playerName}
                   onChange={e => { setPlayerName(e.target.value); setError(''); }}
                   onKeyDown={e => e.key === 'Enter' && (mode === 'create' ? handleCreate() : handleJoin())}
-                  placeholder="Enter your name"
+                  placeholder={t('lobby.your_name.placeholder', lang)}
                   maxLength={20}
                   className="w-full bg-white/5 border-2 border-white/10 rounded-xl
                             px-4 py-3 sm:py-4 text-white text-base sm:text-lg
@@ -143,7 +147,7 @@ export function LobbyPage() {
               {mode === 'join' && (
                 <div>
                   <label className="text-white/50 text-xs font-bold uppercase tracking-widest block mb-2">
-                    Room Code
+                    {t('lobby.room_code', lang)}
                   </label>
                   <input
                     type="text"
@@ -162,6 +166,8 @@ export function LobbyPage() {
                 </div>
               )}
 
+              <FlagToggle value={lang} onChange={setLang} label={t('lobby.language', lang)} />
+
               {error && (
                 <p className="text-red-400 text-sm text-center bg-red-500/10 border border-red-500/20
                              rounded-xl px-4 py-2.5 fade-in">
@@ -179,7 +185,7 @@ export function LobbyPage() {
                 {mode === 'create'
                   ? <Plus size={18} strokeWidth={2.5} />
                   : <Users size={18} strokeWidth={2} />}
-                {mode === 'create' ? 'Create Room' : 'Join Room'}
+                {mode === 'create' ? t('lobby.create_room_btn', lang) : t('lobby.join_room_btn', lang)}
               </button>
             </div>
           )}
@@ -189,16 +195,16 @@ export function LobbyPage() {
         <div className="mt-6 sm:mt-10 fade-up">
           <div className="grid grid-cols-4 gap-2 sm:gap-3">
             {[
-              { count: 30, label: 'Challenges', color: 'text-amber-400' },
-              { count: 30, label: 'Truths', color: 'text-violet-400' },
-              { count: 20, label: 'Rules', color: 'text-blue-400' },
-              { count: 20, label: 'Penalties', color: 'text-rose-400' },
+              { count: 60, key: 'lobby.stats.challenges' as const, color: 'text-amber-400' },
+              { count: 60, key: 'lobby.stats.truths' as const, color: 'text-violet-400' },
+              { count: 40, key: 'lobby.stats.rules' as const, color: 'text-blue-400' },
+              { count: 40, key: 'lobby.stats.penalties' as const, color: 'text-rose-400' },
             ].map(stat => (
-              <div key={stat.label}
+              <div key={stat.key}
                    className="bg-white/4 border border-white/5 rounded-xl
                              px-2 sm:px-3 py-3 sm:py-4 text-center">
                 <p className={`text-xl sm:text-2xl font-black ${stat.color}`}>{stat.count}</p>
-                <p className="text-white/40 text-[10px] sm:text-xs font-medium mt-0.5">{stat.label}</p>
+                <p className="text-white/40 text-[10px] sm:text-xs font-medium mt-0.5">{t(stat.key, lang)}</p>
               </div>
             ))}
           </div>

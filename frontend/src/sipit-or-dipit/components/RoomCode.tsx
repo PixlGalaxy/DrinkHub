@@ -1,11 +1,14 @@
 import { Copy, Check } from 'lucide-react';
 import { useState } from 'react';
+import { useLanguage } from '../../shared/i18n/useLanguage';
+import { t } from '../../shared/i18n/translations';
 
 interface RoomCodeProps {
   code: string;
 }
 
 export function RoomCode({ code }: RoomCodeProps) {
+  const [lang] = useLanguage();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -21,7 +24,7 @@ export function RoomCode({ code }: RoomCodeProps) {
   return (
     <div className="flex flex-col items-center gap-3">
       <p className="text-white/40 text-xs sm:text-sm font-semibold uppercase tracking-[0.2em]">
-        Room Code
+        {t('room_code.label', lang)}
       </p>
       <button
         onClick={handleCopy}
@@ -43,7 +46,7 @@ export function RoomCode({ code }: RoomCodeProps) {
         </div>
       </button>
       <p className={`text-xs sm:text-sm font-medium transition-colors ${copied ? 'text-emerald-400' : 'text-white/30'}`}>
-        {copied ? 'Copied to clipboard!' : 'Tap to copy'}
+        {copied ? t('room_code.copied', lang) : t('room_code.tap_to_copy', lang)}
       </p>
     </div>
   );

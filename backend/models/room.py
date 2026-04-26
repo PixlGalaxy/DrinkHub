@@ -15,8 +15,8 @@ class Player:
 @dataclass
 class ActiveRule:
     card_id: str
-    title: str
-    description: str
+    title: dict  # {"en": "...", "es": "..."}
+    description: dict  # {"en": "...", "es": "..."}
     rounds_remaining: int
 
 
@@ -28,6 +28,7 @@ class GameState:
     discard_pile: list = field(default_factory=list)
     current_card: Optional[dict] = None
     card_drawn: bool = False
+    card_revealed: bool = False
     active_rules: list = field(default_factory=list)
     round_number: int = 0
 
@@ -72,6 +73,7 @@ class Room:
             "current_player_name": cur.name if cur else "",
             "current_card": gs.current_card,
             "card_drawn": gs.card_drawn,
+            "card_revealed": gs.card_revealed,
             "active_rules": [
                 {"card_id": r.card_id, "title": r.title, "description": r.description, "rounds_remaining": r.rounds_remaining}
                 for r in gs.active_rules

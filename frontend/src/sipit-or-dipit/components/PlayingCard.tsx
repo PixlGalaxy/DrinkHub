@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { Zap, MessageSquare, Shield, Skull, Wine, GlassWater } from 'lucide-react';
 import type { Card, CardType } from '../../shared/types';
+import { useLanguage } from '../../shared/i18n/useLanguage';
+import { pick, t, type StringKey } from '../../shared/i18n/translations';
 
 const CARD_CONFIG: Record<CardType, {
   gradient: string;
   border: string;
   icon: React.ElementType;
-  label: string;
+  labelKey: StringKey;
   iconBg: string;
   textMuted: string;
   drinkIcon: React.ElementType;
@@ -15,7 +17,7 @@ const CARD_CONFIG: Record<CardType, {
     gradient: 'from-amber-500 via-orange-500 to-amber-600',
     border: 'border-amber-400/40',
     icon: Zap,
-    label: 'Challenge',
+    labelKey: 'card.challenge',
     iconBg: 'bg-amber-400/25',
     textMuted: 'text-amber-100/80',
     drinkIcon: GlassWater,
@@ -24,7 +26,7 @@ const CARD_CONFIG: Record<CardType, {
     gradient: 'from-violet-600 via-purple-600 to-violet-700',
     border: 'border-violet-400/40',
     icon: MessageSquare,
-    label: 'Truth',
+    labelKey: 'card.truth',
     iconBg: 'bg-violet-400/25',
     textMuted: 'text-violet-100/80',
     drinkIcon: Wine,
@@ -33,7 +35,7 @@ const CARD_CONFIG: Record<CardType, {
     gradient: 'from-blue-600 via-cyan-600 to-blue-700',
     border: 'border-blue-400/40',
     icon: Shield,
-    label: 'Rule',
+    labelKey: 'card.rule',
     iconBg: 'bg-blue-400/25',
     textMuted: 'text-blue-100/80',
     drinkIcon: GlassWater,
@@ -42,7 +44,7 @@ const CARD_CONFIG: Record<CardType, {
     gradient: 'from-rose-600 via-red-600 to-rose-700',
     border: 'border-rose-400/40',
     icon: Skull,
-    label: 'Penalty',
+    labelKey: 'card.penalty',
     iconBg: 'bg-rose-400/25',
     textMuted: 'text-rose-100/80',
     drinkIcon: Wine,
@@ -51,41 +53,46 @@ const CARD_CONFIG: Record<CardType, {
 
 interface PlayingCardProps {
   card: Card;
+  revealed: boolean;
+  canReveal: boolean;
+  onReveal: () => void;
 }
 
-export function PlayingCard({ card }: PlayingCardProps) {
-  const [isFlipped, setIsFlipped] = useState(false);
+export function PlayingCard({ card, revealed, canReveal, onReveal }: PlayingCardProps) {
+  const [lang] = useLanguage();
   const [isEntering, setIsEntering] = useState(true);
   const prevCardId = useRef<string | null>(null);
 
   useEffect(() => {
     if (card.id !== prevCardId.current) {
       prevCardId.current = card.id;
-      setIsFlipped(false);
       setIsEntering(true);
       const enterTimer = setTimeout(() => setIsEntering(false), 550);
-      const flipTimer = setTimeout(() => setIsFlipped(true), 700);
-      return () => {
-        clearTimeout(enterTimer);
-        clearTimeout(flipTimer);
-      };
+      return () => clearTimeout(enterTimer);
     }
   }, [card.id]);
+
+  const interactable = !revealed && canReveal;
 
   const cfg = CARD_CONFIG[card.type];
   const Icon = cfg.icon;
   const DrinkIcon = cfg.drinkIcon;
+  const title = pick(card.title, lang);
+  const description = pick(card.description, lang);
+  const consequence = pick(card.consequence, lang);
+  const typeLabel = t(cfg.labelKey, lang);
 
   return (
     <div
       className={`w-full max-w-[340px] sm:max-w-sm md:max-w-md mx-auto
                   h-[440px] sm:h-[500px] md:h-[560px]
-                  card-flip-container cursor-pointer select-none
+                  card-flip-container select-none
+                  ${interactable ? 'cursor-pointer' : 'cursor-default'}
                   ${isEntering ? 'card-enter' : ''}`}
-      onClick={() => !isFlipped && setIsFlipped(true)}
-      aria-label={isFlipped ? `${card.type} card: ${card.title}` : 'Card face down — tap to reveal'}
+      onClick={() => { if (interactable) onReveal(); }}
+      aria-label={revealed ? `${typeLabel}: ${title}` : t('card.tap_reveal_a11y', lang)}
     >
-      <div className={`card-flip-inner ${isFlipped ? 'flipped' : ''}`}>
+      <div className={`card-flip-inner ${revealed ? 'flipped' : ''}`}>
 
         {/* ── Card Back (face-down) ── */}
         <div className="card-face bg-[#12121c] border-2 border-yellow-400/40 shadow-2xl shadow-black/60">
@@ -101,7 +108,9 @@ export function PlayingCard({ card }: PlayingCardProps) {
               <p className="text-white font-black text-xl sm:text-2xl md:text-3xl tracking-tight leading-none">SipIt</p>
               <p className="text-yellow-400 font-black text-xl sm:text-2xl md:text-3xl tracking-tight leading-none mt-1">Or DipIt</p>
             </div>
-            <p className="text-white/30 text-xs sm:text-sm font-medium mt-2">Tap to reveal</p>
+            <p className="text-white/30 text-xs sm:text-sm font-medium mt-2 min-h-[1.25rem]">
+              {interactable ? t('card.tap_reveal', lang) : ''}
+            </p>
 
             {/* Decorative corner dots */}
             <div className="absolute top-4 sm:top-5 left-4 sm:left-5 flex gap-1">
@@ -135,12 +144,14 @@ export function PlayingCard({ card }: PlayingCardProps) {
                 <Icon size={14} className="text-white sm:hidden" strokeWidth={2.5} />
                 <Icon size={16} className="text-white hidden sm:block" strokeWidth={2.5} />
                 <span className="text-white font-bold text-xs sm:text-sm uppercase tracking-widest">
-                  {cfg.label}
+                  {typeLabel}
                 </span>
               </div>
               {card.rounds && (
                 <div className="bg-white/20 backdrop-blur-sm rounded-xl px-3 py-1.5 sm:px-4 sm:py-2 border border-white/10">
-                  <span className="text-white font-bold text-xs sm:text-sm">{card.rounds} rounds</span>
+                  <span className="text-white font-bold text-xs sm:text-sm">
+                    {t('card.rounds', lang, { count: card.rounds })}
+                  </span>
                 </div>
               )}
             </div>
@@ -160,25 +171,25 @@ export function PlayingCard({ card }: PlayingCardProps) {
             {/* Title */}
             <h2 className="text-white font-black text-2xl sm:text-3xl md:text-4xl text-center
                           leading-tight mb-3 sm:mb-4 relative z-10 text-balance">
-              {card.title}
+              {title}
             </h2>
 
             {/* Description */}
             <p className="text-white/95 text-sm sm:text-base md:text-lg text-center
                          leading-relaxed flex-1 relative z-10 text-balance px-1">
-              {card.description}
+              {description}
             </p>
 
             {/* Consequence */}
-            {card.consequence && (
+            {consequence && (
               <div className="mt-4 sm:mt-5 bg-black/30 backdrop-blur-sm rounded-xl
                              p-3 sm:p-4 relative z-10 border border-white/10">
                 <div className="flex items-start gap-2 sm:gap-2.5">
                   <DrinkIcon size={15} className="text-white/70 shrink-0 mt-0.5" strokeWidth={2} />
                   <p className={`text-xs sm:text-sm ${cfg.textMuted} leading-relaxed`}>
                     {card.type === 'challenge' || card.type === 'truth'
-                      ? <><span className="text-white/60 font-bold">Or skip it: </span>{card.consequence}</>
-                      : card.consequence
+                      ? <><span className="text-white/60 font-bold">{t('card.skip_label', lang)}</span>{consequence}</>
+                      : consequence
                     }
                   </p>
                 </div>
@@ -205,6 +216,8 @@ interface DeckProps {
 }
 
 export function CardDeck({ isMyTurn, onDraw }: DeckProps) {
+  const [lang] = useLanguage();
+
   return (
     <div className="w-full max-w-[340px] sm:max-w-sm md:max-w-md mx-auto flex flex-col items-center gap-4">
       {/* Stacked deck visual */}
@@ -242,7 +255,7 @@ export function CardDeck({ isMyTurn, onDraw }: DeckProps) {
                               rounded-xl transition-all text-sm sm:text-base
                               shadow-lg shadow-yellow-400/30"
                   >
-                    Draw Card
+                    {t('card.draw', lang)}
                   </button>
                 )}
 

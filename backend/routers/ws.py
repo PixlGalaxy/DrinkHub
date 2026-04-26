@@ -99,6 +99,17 @@ async def websocket_endpoint(websocket: WebSocket):
                 room_svc.draw_card(room)
                 await _broadcast_state(room_code)
 
+            elif msg_type == "reveal_card":
+                room = room_svc.get_room(room_code)
+                if not room or room.game_state.status != "playing":
+                    continue
+                cur = room.current_player()
+                if not cur or cur.id != player_id:
+                    await manager.send_to(player_id, {"type": "error", "message": "It's not your turn."})
+                    continue
+                if room_svc.reveal_card(room):
+                    await _broadcast_state(room_code)
+
             elif msg_type == "next_turn":
                 room = room_svc.get_room(room_code)
                 if not room or room.game_state.status != "playing":

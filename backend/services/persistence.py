@@ -78,11 +78,16 @@ def load_rooms() -> dict:
                 players.append(player)
 
             gs_raw = raw.get("game_state", {})
+            def _bi(value):
+                if isinstance(value, dict):
+                    return value
+                return {"en": value, "es": value}
+
             active_rules = [
                 ActiveRule(
                     card_id=r["card_id"],
-                    title=r["title"],
-                    description=r["description"],
+                    title=_bi(r["title"]),
+                    description=_bi(r["description"]),
                     rounds_remaining=r["rounds_remaining"],
                 )
                 for r in gs_raw.get("active_rules", [])
@@ -94,6 +99,7 @@ def load_rooms() -> dict:
                 discard_pile=gs_raw.get("discard_pile", []),
                 current_card=gs_raw.get("current_card"),
                 card_drawn=gs_raw.get("card_drawn", False),
+                card_revealed=gs_raw.get("card_revealed", False),
                 active_rules=active_rules,
                 round_number=gs_raw.get("round_number", 0),
             )
