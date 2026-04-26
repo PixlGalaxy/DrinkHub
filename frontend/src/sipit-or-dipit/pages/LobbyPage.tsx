@@ -1,8 +1,9 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Users, Plus, LogIn, Flame, ChevronRight, ArrowLeft } from 'lucide-react';
 import { GameNavbar } from '../navbar/GameNavbar';
 import { Footer } from '../../shared/components/Footer';
+import { Toast } from '../../shared/components/Toast';
 import { useClearSEO } from '../../shared/hooks/useClearSEO';
 import { useLanguage } from '../../shared/i18n/useLanguage';
 import { t } from '../../shared/i18n/translations';
@@ -13,11 +14,21 @@ type Mode = 'select' | 'create' | 'join';
 export function LobbyPage() {
   useClearSEO();
   const navigate = useNavigate();
+  const location = useLocation();
   const [lang, setLang] = useLanguage();
   const [mode, setMode] = useState<Mode>('select');
   const [playerName, setPlayerName] = useState('');
   const [roomCode, setRoomCode] = useState('');
   const [error, setError] = useState('');
+  const [toastMsg, setToastMsg] = useState('');
+
+  useEffect(() => {
+    const state = location.state as Record<string, unknown> | null;
+    if (state?.roomNotFound) {
+      setToastMsg(state.roomNotFound as string);
+      navigate('/sipit-or-dipit', { replace: true, state: {} });
+    }
+  }, [location.state, navigate]);
 
   const handleCreate = () => {
     const name = playerName.trim();
@@ -41,6 +52,14 @@ export function LobbyPage() {
 
   return (
     <div className="min-h-svh flex flex-col bg-[#0a0a0f] bg-grid">
+      {toastMsg && (
+        <Toast
+          message={toastMsg}
+          type="error"
+          onClose={() => setToastMsg('')}
+          autoCloseDuration={5000}
+        />
+      )}
       <GameNavbar />
 
       <main className="flex-1 w-full max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12 lg:py-16

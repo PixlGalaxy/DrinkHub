@@ -112,7 +112,16 @@ export function GameRoomPage() {
         });
       }
     });
-    on('error', (msg) => setErrorMsg((msg.message as string) || t('game.error.generic', lang)));
+    on('error', (msg) => {
+      const errorMessage = (msg.message as string) || t('game.error.generic', lang);
+      if (errorMessage.includes('Room not found')) {
+        clearSession();
+        disconnect();
+        navigate('/sipit-or-dipit', { replace: true, state: { roomNotFound: errorMessage } });
+      } else {
+        setErrorMsg(errorMessage);
+      }
+    });
     on('room_deleted', () => {
       disconnect();
       clearSession();
