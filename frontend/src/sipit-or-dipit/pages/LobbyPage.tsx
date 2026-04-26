@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Users, Plus, LogIn, Flame, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Users, Plus, LogIn, Flame, ChevronRight, ArrowLeft, RotateCcw } from 'lucide-react';
 import { GameNavbar } from '../navbar/GameNavbar';
 import { Footer } from '../../shared/components/Footer';
 import { Toast } from '../../shared/components/Toast';
@@ -8,6 +8,19 @@ import { useClearSEO } from '../../shared/hooks/useClearSEO';
 import { useLanguage } from '../../shared/i18n/useLanguage';
 import { t } from '../../shared/i18n/translations';
 import { FlagToggle } from '../../shared/i18n/FlagIcon';
+
+const SESSION_KEY = 'dh_active_session';
+
+function loadStoredSession(): { roomCode: string; playerName: string } | null {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+function clearStoredSession() {
+  try { localStorage.removeItem(SESSION_KEY); } catch {}
+}
 
 type Mode = 'select' | 'create' | 'join';
 
@@ -21,6 +34,7 @@ export function LobbyPage() {
   const [roomCode, setRoomCode] = useState('');
   const [error, setError] = useState('');
   const [toastMsg, setToastMsg] = useState('');
+  const [storedSession] = useState(loadStoredSession);
 
   useEffect(() => {
     const state = location.state as Record<string, unknown> | null;
@@ -30,9 +44,14 @@ export function LobbyPage() {
     }
   }, [location.state, navigate]);
 
+  const handleReconnect = () => {
+    navigate('/sipit-or-dipit/room');
+  };
+
   const handleCreate = () => {
     const name = playerName.trim();
     if (!name) { setError(t('lobby.error.name_required', lang)); return; }
+    clearStoredSession();
     sessionStorage.setItem('dh_player_name', name);
     navigate('/sipit-or-dipit/room', {
       state: { action: 'create', playerName: name, gameId: 'sipit-or-dipit' }
@@ -44,6 +63,7 @@ export function LobbyPage() {
     const code = roomCode.trim().toUpperCase();
     if (!name) { setError(t('lobby.error.name_required', lang)); return; }
     if (code.length !== 6) { setError(t('lobby.error.code_length', lang)); return; }
+    clearStoredSession();
     sessionStorage.setItem('dh_player_name', name);
     navigate('/sipit-or-dipit/room', {
       state: { action: 'join', playerName: name, roomCode: code, gameId: 'sipit-or-dipit' }
@@ -83,6 +103,29 @@ export function LobbyPage() {
             {t('lobby.tagline', lang)}
           </p>
         </div>
+
+        {/* ─────────── Reconnect banner ─────────── */}
+        {storedSession && (
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4
+                          flex items-center justify-between gap-3 fade-up mb-3">
+            <div className="min-w-0">
+              <p className="text-amber-300 font-bold text-sm">
+                {lang === 'es' ? 'Partida activa detectada' : 'Active game detected'}
+              </p>
+              <p className="text-white/40 text-xs mt-0.5 font-mono">
+                {lang === 'es' ? 'Sala' : 'Room'} {storedSession.roomCode} · {storedSession.playerName}
+              </p>
+            </div>
+            <button
+              onClick={handleReconnect}
+              className="shrink-0 flex items-center gap-2 bg-amber-500 hover:bg-amber-400
+                         text-black font-bold px-4 py-2 rounded-xl text-sm transition-all active:scale-95"
+            >
+              <RotateCcw size={14} strokeWidth={2.5} />
+              {lang === 'es' ? 'Reconectar' : 'Reconnect'}
+            </button>
+          </div>
+        )}
 
         {/* ─────────── Action card ─────────── */}
         <div className="bg-[#13131a] border border-white/8 rounded-2xl sm:rounded-3xl

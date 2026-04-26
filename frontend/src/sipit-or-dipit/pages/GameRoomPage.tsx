@@ -79,11 +79,9 @@ export function GameRoomPage() {
   }, [state, navigate]);
 
   const handleLeave = useCallback(() => {
-    send({ type: 'leave_room' });
     disconnect();
-    clearSession();
     navigate('/sipit-or-dipit', { replace: true });
-  }, [send, disconnect, navigate]);
+  }, [disconnect, navigate]);
 
   const handleRejoin = useCallback(() => {
     if (!state) return;
@@ -132,7 +130,8 @@ export function GameRoomPage() {
   useEffect(() => {
     if (!state) return;
     connect();
-  }, [state, connect]);
+    return () => { disconnect(); };
+  }, [state, connect, disconnect]);
 
   useEffect(() => {
     if (status !== 'connected' || !state || actionSent.current) return;
@@ -156,10 +155,25 @@ export function GameRoomPage() {
       <div className="min-h-svh flex flex-col bg-[#0a0a0f]">
         <GameNavbar />
         <div className="flex-1 flex flex-col items-center justify-center gap-4 px-4">
-          <Loader size={32} className="text-yellow-400 animate-spin" strokeWidth={2} />
-          <p className="text-white/50 text-sm sm:text-base">
-            {status === 'connecting' ? t('game.connecting', lang) : t('game.loading', lang)}
-          </p>
+          {errorMsg ? (
+            <>
+              <p className="text-red-400 text-center text-sm sm:text-base max-w-xs">{errorMsg}</p>
+              <button
+                onClick={() => { disconnect(); navigate('/sipit-or-dipit', { replace: true }); }}
+                className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10
+                           text-white/70 font-semibold px-6 py-3 rounded-xl transition-all active:scale-95 text-sm"
+              >
+                {t('game.back_to_lobby', lang)}
+              </button>
+            </>
+          ) : (
+            <>
+              <Loader size={32} className="text-yellow-400 animate-spin" strokeWidth={2} />
+              <p className="text-white/50 text-sm sm:text-base">
+                {status === 'connecting' ? t('game.connecting', lang) : t('game.loading', lang)}
+              </p>
+            </>
+          )}
         </div>
       </div>
     );
