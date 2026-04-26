@@ -32,7 +32,7 @@ export function LobbyPage() {
     const name = playerName.trim();
     const code = roomCode.trim().toUpperCase();
     if (!name) { setError(t('lobby.error.name_required', lang)); return; }
-    if (code.length !== 4) { setError(t('lobby.error.code_length', lang)); return; }
+    if (code.length !== 6) { setError(t('lobby.error.code_length', lang)); return; }
     sessionStorage.setItem('dh_player_name', name);
     navigate('/sipit-or-dipit/room', {
       state: { action: 'join', playerName: name, roomCode: code, gameId: 'sipit-or-dipit' }
@@ -152,16 +152,16 @@ export function LobbyPage() {
                   <input
                     type="text"
                     value={roomCode}
-                    onChange={e => { setRoomCode(e.target.value.toUpperCase().slice(0, 4)); setError(''); }}
+                    onChange={e => { setRoomCode(e.target.value.toUpperCase().slice(0, 6)); setError(''); }}
                     onKeyDown={e => e.key === 'Enter' && handleJoin()}
-                    placeholder="ABCD"
-                    maxLength={4}
+                    placeholder="ABCDEF"
+                    maxLength={6}
                     autoComplete="off"
                     className="w-full bg-white/5 border-2 border-white/10 rounded-xl
-                              px-4 py-3 sm:py-4 text-white text-2xl sm:text-3xl font-black font-mono
+                              px-4 py-3 sm:py-4 text-white text-xl sm:text-2xl font-black font-mono
                               placeholder-white/15 focus:outline-none focus:border-yellow-400/60
                               focus:bg-white/8 transition-all
-                              text-center tracking-[0.4em]"
+                              text-center tracking-[0.25em]"
                   />
                 </div>
               )}
