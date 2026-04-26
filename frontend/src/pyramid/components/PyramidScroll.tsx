@@ -35,7 +35,6 @@ function PyramidCardView({ card, isActive, isNew }: PyramidCardViewProps) {
         {card.revealed && card.image ? (
           <img
             src={`/Cards/${card.image}@1x.png`}
-            srcSet={`/Cards/${card.image}@2x.png 2x, /Cards/${card.image}@3x.png 3x`}
             alt={`${card.rank} ${card.suit}`}
             className="w-full h-full object-cover"
             draggable={false}
