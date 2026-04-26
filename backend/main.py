@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from routers.ws import router as ws_router
 from services.room_service import cleanup_expired_rooms, cleanup_disconnected_players, get_all_rooms, hydrate_rooms
 from services.persistence import load_rooms, save_rooms
+from services.security import rate_limiter
 from games.registry import list_games
 from websocket.manager import manager
 
@@ -32,6 +33,7 @@ async def lifespan(_app: FastAPI):
             removed = cleanup_disconnected_players()
             for code in expired + removed:
                 manager.cleanup_room(code)
+            rate_limiter.cleanup()
 
     async def save_loop():
         while True:
@@ -58,8 +60,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 app.include_router(ws_router)
