@@ -1,5 +1,5 @@
 # 1 Build the React frontend
-FROM node:25-alpine AS build-frontend
+FROM node:26-alpine AS build-frontend
 WORKDIR /app/frontend
 
 COPY frontend/package.json frontend/package-lock.json* ./
