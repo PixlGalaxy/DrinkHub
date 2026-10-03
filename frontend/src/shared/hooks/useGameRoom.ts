@@ -46,6 +46,9 @@ export function useGameRoom<R extends RoomState>({ slug, gameId, lobbyPath, sess
   const roomCode = useRef<string | null>(entry?.action === 'join' ? (entry.roomCode ?? null) : null);
   const createSent = useRef(false);
   const lastVersion = useRef<{ code: string; version: number } | null>(null);
+  const leaveAck = useRef<(() => void) | null>(null);
+  const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pinnedCode = useRef<string | null>(null);
 
   useEffect(() => {
     if (!entry) navigate(lobbyPath, { replace: true });
@@ -57,11 +60,26 @@ export function useGameRoom<R extends RoomState>({ slug, gameId, lobbyPath, sess
     navigate(lobbyPath, { replace: true, state });
   }, [disconnect, navigate, lobbyPath, sessionKey]);
 
-  /** Leave the page but keep the seat, so the lobby can offer to reconnect. */
+  /**
+   * Leave the room for real: free the seat on the server, forget the stored
+   * session and go back to the lobby. (Closing the tab or losing the
+   * connection keeps the seat; that is what the lobby's reconnect banner is for.)
+   */
   const leave = useCallback(() => {
-    disconnect();
-    navigate(lobbyPath, { replace: true });
-  }, [disconnect, navigate, lobbyPath]);
+    const done = () => {
+      if (leaveTimer.current) clearTimeout(leaveTimer.current);
+      leaveTimer.current = null;
+      leaveAck.current = null;
+      exitToLobby();
+    };
+    if (status !== 'connected' || !roomCode.current) {
+      done();
+      return;
+    }
+    leaveAck.current = done;
+    send({ type: 'leave_room' });
+    leaveTimer.current = setTimeout(done, 1500);
+  }, [status, send, exitToLobby]);
 
   useEffect(() => {
     if (!entry) return;
@@ -92,7 +110,17 @@ export function useGameRoom<R extends RoomState>({ slug, gameId, lobbyPath, sess
       setRoom(data);
       setErrorMsg('');
       saveRoom(sessionKey, { roomCode: data.room_code, playerName: entry.playerName, gameId: data.game_id });
+      if (pinnedCode.current !== data.room_code) {
+        // The history entry still says "create" (or another code). Rewrite it
+        // so a reload or back/forward rejoins this room instead of creating
+        // a new one (which would also drop us from this room).
+        pinnedCode.current = data.room_code;
+        const pinned: RoomEntry = { action: 'join', playerName: entry.playerName, roomCode: data.room_code, gameId };
+        navigate(location.pathname, { replace: true, state: pinned });
+      }
     });
+
+    on('left_room', () => leaveAck.current?.());
 
     on('error', (msg) => {
       const message = typeof msg.message === 'string' ? msg.message : '';
@@ -104,13 +132,17 @@ export function useGameRoom<R extends RoomState>({ slug, gameId, lobbyPath, sess
     });
 
     on('room_deleted', () => exitToLobby({ deleted: true }));
-  }, [entry, on, send, gameId, sessionKey, exitToLobby]);
+  }, [entry, on, send, gameId, sessionKey, exitToLobby, navigate, location.pathname]);
 
   useEffect(() => {
     if (!entry) return;
     connect();
     return () => disconnect();
   }, [entry, connect, disconnect]);
+
+  useEffect(() => () => {
+    if (leaveTimer.current) clearTimeout(leaveTimer.current);
+  }, []);
 
   return { entry, room, errorMsg, status, send, leave, exitToLobby, reconnectNow };
 }

@@ -37,7 +37,7 @@ move the storage root elsewhere; the per-module folders are created on start.
 | `GET /api/games` | registered games |
 | `GET /api/<slug>` | game info (SipIt also returns card counts) |
 | `GET /api/<slug>/stats` | counters stored in the game's DB |
-| `GET /api/<slug>/rooms/:code` | `{ exists, status, players, joinable }` |
+| `GET /api/<slug>/rooms/:code` | `{ exists, seat, status, players, joinable }`; `seat` needs `Authorization: Bearer <session token>` |
 | `WS  /api/<slug>/ws` | realtime endpoint of that game |
 
 Slugs: `sipitordipit`, `pyramid`.

@@ -3,7 +3,7 @@ import type { Duplex } from 'node:stream';
 import { config } from './config.ts';
 import type { GameHub } from './hub.ts';
 import { createLogger } from './log.ts';
-import { clientIp, isOriginAllowed, rateLimiter } from './security.ts';
+import { clientIp, isOriginAllowed, rateLimiter, verifyToken } from './security.ts';
 
 const log = createLogger('http');
 const startedAt = Date.now();
@@ -44,6 +44,13 @@ export class Router {
   }
 }
 
+/** Player id from `Authorization: Bearer <session token>`, if valid. */
+function bearerPlayer(req: IncomingMessage): string | null {
+  const header = req.headers.authorization;
+  const token = header?.startsWith('Bearer ') ? header.slice(7).trim() : '';
+  return token ? verifyToken(token) : null;
+}
+
 function sendJson(res: ServerResponse, status: number, body: unknown) {
   const payload = JSON.stringify(body);
   res.writeHead(status, {
@@ -60,7 +67,7 @@ function applyCors(req: IncomingMessage, res: ServerResponse) {
   res.setHeader('Access-Control-Allow-Origin', config.allowedOrigins.includes('*') ? '*' : origin);
   res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 }
 
 /**
@@ -69,7 +76,7 @@ function applyCors(req: IncomingMessage, res: ServerResponse) {
  *   GET /api/games                list of games
  *   GET /api/<slug>               game info (+ game-specific data)
  *   GET /api/<slug>/stats         counters from the game's DB
- *   GET /api/<slug>/rooms/:code   whether a room exists / can be joined
+ *   GET /api/<slug>/rooms/:code   whether a room exists / can be joined / caller has a seat
  *   WS  /api/<slug>/ws            realtime endpoint for that game
  */
 export function createHttpServer(hubs: GameHub<any>[]): Server {
@@ -100,7 +107,7 @@ export function createHttpServer(hubs: GameHub<any>[]): Server {
       ...game.info?.(),
     }));
     router.get(`${base}/stats`, () => ({ ...hub.store.stats(), ...hub.summary() }));
-    router.get(`${base}/rooms/:code`, (_req, params) => hub.roomSummary(params.code ?? ''));
+    router.get(`${base}/rooms/:code`, (req, params) => hub.roomSummary(params.code ?? '', bearerPlayer(req)));
   }
 
   const server = createServer((req, res) => {
