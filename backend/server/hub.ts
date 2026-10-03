@@ -584,12 +584,18 @@ export class GameHub<S> {
     return { rooms: this.rooms.size, players_online: online };
   }
 
-  roomSummary(rawCode: string) {
+  /**
+   * Public room info. With the caller's player id it also says whether they
+   * still hold a seat there, so the lobby only offers "reconnect" when it
+   * will actually work.
+   */
+  roomSummary(rawCode: string, playerId?: string | null) {
     const code = sanitizeRoomCode(rawCode);
     const room = code ? this.rooms.get(code) : undefined;
-    if (!room) return { exists: false };
+    if (!room) return { exists: false, seat: false };
     return {
       exists: true,
+      seat: playerId ? !!findPlayer(room, playerId) : null,
       status: room.status,
       players: room.players.length,
       max_players: this.game.maxPlayers,

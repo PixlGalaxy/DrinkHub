@@ -8,7 +8,8 @@ import { useClearSEO } from '../../shared/hooks/useClearSEO';
 import { useLanguage } from '../../shared/i18n/useLanguage';
 import { t } from '../../shared/i18n/translations';
 import { FlagToggle } from '../../shared/i18n/FlagIcon';
-import { clearRoom, loadRoom, safeStorage } from '../../shared/session';
+import { clearRoom, safeStorage } from '../../shared/session';
+import { useStoredRoom } from '../../shared/hooks/useStoredRoom';
 
 const SESSION_KEY = 'dh_pyramid_session';
 
@@ -24,7 +25,7 @@ export function LobbyPage() {
   const [roomCode, setRoomCode] = useState('');
   const [error, setError] = useState('');
   const [toastMsg, setToastMsg] = useState('');
-  const [storedSession] = useState(() => loadRoom(SESSION_KEY));
+  const storedSession = useStoredRoom('pyramid', SESSION_KEY);
 
   useEffect(() => {
     const state = location.state as Record<string, unknown> | null;

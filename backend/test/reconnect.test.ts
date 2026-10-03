@@ -208,3 +208,36 @@ describe('pyramid', () => {
     reloaded.store.close();
   });
 });
+
+describe('leaving and the lobby reconnect check', () => {
+  const summary = async (code: string, token?: string | null) =>
+    (await fetch(srv.url(`/api/sipitordipit/rooms/${code}`), {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    }).then(r => r.json())) as any;
+
+  test('room summary says whether the caller still has a seat', async () => {
+    const { code, clients } = await sipRoom(['Ana', 'Beto']);
+    const [ana] = clients as [Client];
+    assert.equal((await summary(code, ana.token)).seat, true);
+    assert.equal((await summary(code)).seat, null, 'unknown without a token');
+    const stranger = await Client.connect(srv.port, 'sipitordipit');
+    assert.equal((await summary(code, stranger.token)).seat, false);
+    assert.deepEqual(await summary('ZZZZZZ', ana.token), { exists: false, seat: false });
+  });
+
+  test('leave_room frees the seat and an empty room is deleted', async () => {
+    const { code, clients } = await sipRoom(['Ana', 'Beto']);
+    const [ana, beto] = clients as [Client, Client];
+    const left = beto.next(m => m.type === 'left_room', beto.messages.length);
+    beto.send({ type: 'leave_room' });
+    await left;
+    assert.equal((await summary(code, beto.token)).seat, false);
+    const state = await ana.next(m => m.type === 'room_state' && m.players.length === 1);
+    assert.equal(state.host_id, ana.playerId);
+
+    const anaLeft = ana.next(m => m.type === 'left_room', ana.messages.length);
+    ana.send({ type: 'leave_room' });
+    await anaLeft;
+    assert.equal((await summary(code)).exists, false);
+  });
+});
