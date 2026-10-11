@@ -8,19 +8,10 @@ import { useClearSEO } from '../../shared/hooks/useClearSEO';
 import { useLanguage } from '../../shared/i18n/useLanguage';
 import { t } from '../../shared/i18n/translations';
 import { FlagToggle } from '../../shared/i18n/FlagIcon';
+import { clearRoom, safeStorage } from '../../shared/session';
+import { useStoredRoom } from '../../shared/hooks/useStoredRoom';
 
 const SESSION_KEY = 'dh_pyramid_session';
-
-function loadStoredSession(): { roomCode: string; playerName: string } | null {
-  try {
-    const raw = localStorage.getItem(SESSION_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
-}
-
-function clearStoredSession() {
-  try { localStorage.removeItem(SESSION_KEY); } catch {}
-}
 
 type Mode = 'select' | 'create' | 'join';
 
@@ -34,7 +25,7 @@ export function LobbyPage() {
   const [roomCode, setRoomCode] = useState('');
   const [error, setError] = useState('');
   const [toastMsg, setToastMsg] = useState('');
-  const [storedSession] = useState(loadStoredSession);
+  const storedSession = useStoredRoom('pyramid', SESSION_KEY);
 
   useEffect(() => {
     const state = location.state as Record<string, unknown> | null;
@@ -45,15 +36,15 @@ export function LobbyPage() {
   }, [location.state, navigate]);
 
   const handleReconnect = () => {
-    // Session still in localStorage → GameRoomPage will auto-rejoin via loadSession()
+    // Stored session → GameRoomPage rejoins the same room automatically
     navigate('/pyramid/room');
   };
 
   const handleCreate = () => {
     const name = playerName.trim();
     if (!name) { setError(t('lobby.error.name_required', lang)); return; }
-    clearStoredSession(); // discard any old room before creating a new one
-    sessionStorage.setItem('dh_player_name', name);
+    clearRoom(SESSION_KEY); // discard any old room before creating a new one
+    safeStorage.set('dh_player_name', name);
     navigate('/pyramid/room', {
       state: { action: 'create', playerName: name, gameId: 'pyramid' },
     });
@@ -64,8 +55,8 @@ export function LobbyPage() {
     const code = roomCode.trim().toUpperCase();
     if (!name) { setError(t('lobby.error.name_required', lang)); return; }
     if (code.length !== 6) { setError(t('lobby.error.code_length', lang)); return; }
-    clearStoredSession(); // discard any old room before joining a different one
-    sessionStorage.setItem('dh_player_name', name);
+    clearRoom(SESSION_KEY); // discard any old room before joining a different one
+    safeStorage.set('dh_player_name', name);
     navigate('/pyramid/room', {
       state: { action: 'join', playerName: name, roomCode: code, gameId: 'pyramid' },
     });

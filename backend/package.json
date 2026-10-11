@@ -1,0 +1,23 @@
+{
+  "name": "drinkhub-backend",
+  "private": true,
+  "version": "2.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning index.ts",
+    "dev": "node --disable-warning=ExperimentalWarning --watch index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --disable-warning=ExperimentalWarning --test \"test/**/*.test.ts\""
+  },
+  "dependencies": {
+    "ws": "^8.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "@types/ws": "^8.18.1",
+    "typescript": "^7.0.2"
+  }
+}

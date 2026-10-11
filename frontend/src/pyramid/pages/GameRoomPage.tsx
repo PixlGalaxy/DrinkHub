@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useCallback } from 'react';
 import {
   Play, Trash2, Users, Loader, RotateCcw, ChevronRight, Hourglass, Trophy, Check,
 } from 'lucide-react';
-import { useWebSocket } from '../../shared/hooks/useWebSocket';
+import { useGameRoom } from '../../shared/hooks/useGameRoom';
+import { ConnectionBanner } from '../../shared/components/ConnectionBanner';
 import { useClearSEO } from '../../shared/hooks/useClearSEO';
 import type { PyramidRoomState } from '../../shared/types';
 import { GameNavbar } from '../navbar/GameNavbar';
@@ -14,120 +14,22 @@ import { PlayerList } from '../../sipit-or-dipit/components/PlayerList';
 import { useLanguage } from '../../shared/i18n/useLanguage';
 import { t } from '../../shared/i18n/translations';
 
-const SESSION_KEY = 'dh_pyramid_session';
-
-type LocationState = {
-  action: 'create' | 'join';
-  playerName: string;
-  roomCode?: string;
-  gameId: string;
-};
-
-type StoredSession = { roomCode: string; playerName: string; gameId: string };
-
-function saveSession(s: StoredSession) {
-  try { localStorage.setItem(SESSION_KEY, JSON.stringify(s)); } catch {}
-}
-function loadSession(): StoredSession | null {
-  try { const r = localStorage.getItem(SESSION_KEY); return r ? JSON.parse(r) : null; } catch { return null; }
-}
-function clearSession() {
-  try { localStorage.removeItem(SESSION_KEY); } catch {}
-}
-
 export function GameRoomPage() {
   useClearSEO();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const passedState = location.state as LocationState | null;
   const [lang] = useLanguage();
-
-  const [initState] = useState<LocationState | null>(() => {
-    if (passedState) return passedState;
-    const stored = loadSession();
-    if (stored) return { action: 'join', playerName: stored.playerName, roomCode: stored.roomCode, gameId: stored.gameId };
-    return null;
+  const { entry, room, errorMsg, status, send, leave, exitToLobby, reconnectNow } = useGameRoom<PyramidRoomState>({
+    slug: 'pyramid',
+    gameId: 'pyramid',
+    lobbyPath: '/pyramid',
+    sessionKey: 'dh_pyramid_session',
   });
-
-  const { connect, disconnect, send, on, status } = useWebSocket();
-  const [room, setRoom] = useState<PyramidRoomState | null>(null);
-  const [errorMsg, setErrorMsg] = useState('');
-  const actionSent = useRef(false);
-
-
-  useEffect(() => {
-    if (!initState) navigate('/pyramid', { replace: true });
-  }, [initState, navigate]);
-
-  const handleLeave = useCallback(() => {
-    // Don't send leave_room — server marks player as disconnected (2-min timeout).
-    // Keep session so they can reconnect from the lobby within that window.
-    disconnect();
-    navigate('/pyramid', { replace: true });
-  }, [disconnect, navigate]);
-
-  const handleRejoin = useCallback(() => {
-    if (!initState) return;
-    actionSent.current = false;
-    setErrorMsg('');
-    connect();
-  }, [initState, connect]);
 
   const handleDelete = useCallback(() => send({ type: 'delete_room' }), [send]);
   const handleStartGame = useCallback(() => send({ type: 'start_game' }), [send]);
+  const handleVoteNext = useCallback(() => send({ type: 'pyramid_vote_next' }), [send]);
+  const handlePlayAgain = useCallback(() => send({ type: 'restart_game' }), [send]);
 
-  const handleVoteNext = useCallback(() => {
-    send({ type: 'pyramid_vote_next' });
-  }, [send]);
-
-  const handlePlayAgain = useCallback(() => {
-    send({ type: 'restart_game' });
-  }, [send]);
-
-
-  useEffect(() => {
-    on('room_state', (msg) => {
-      const data = msg as unknown as PyramidRoomState & { type: string };
-      setRoom(data);
-      setErrorMsg('');
-      if (initState) {
-        saveSession({ roomCode: data.room_code, playerName: initState.playerName, gameId: data.game_id });
-      }
-    });
-    on('error', (msg) => {
-      const err = (msg.message as string) || t('game.error.generic', lang);
-      if (err.includes('Room not found')) {
-        clearSession();
-        disconnect();
-        navigate('/pyramid', { replace: true, state: { roomNotFound: err } });
-      } else {
-        setErrorMsg(err);
-      }
-    });
-    on('room_deleted', () => {
-      disconnect();
-      clearSession();
-      navigate('/pyramid', { replace: true, state: { deleted: true } });
-    });
-  }, [on, disconnect, navigate, initState, lang]);
-
-  useEffect(() => {
-    if (!initState) return;
-    connect();
-    return () => { disconnect(); };
-  }, [initState, connect, disconnect]);
-
-  useEffect(() => {
-    if (status !== 'connected' || !initState || actionSent.current) return;
-    actionSent.current = true;
-    if (initState.action === 'create') {
-      send({ type: 'create_room', player_name: initState.playerName, game_id: initState.gameId });
-    } else {
-      send({ type: 'join_room', room_code: initState.roomCode, player_name: initState.playerName, game_id: initState.gameId });
-    }
-  }, [status, initState, send]);
-
-  if (!initState) return null;
+  if (!entry) return null;
 
   const isHost = room ? room.viewer_id === room.host_id : false;
   const connectedPlayers = room?.players.filter(p => p.is_connected) ?? [];
@@ -146,7 +48,7 @@ export function GameRoomPage() {
 
 
   /* ── Connecting / loading ───────────────────────────────── */
-  if (!room || status === 'connecting' || status === 'idle') {
+  if (!room) {
     return (
       <div className="min-h-svh flex flex-col bg-[#0a0a0f]">
         <GameNavbar />
@@ -155,7 +57,7 @@ export function GameRoomPage() {
             <>
               <p className="text-red-400 text-center text-sm sm:text-base max-w-xs">{errorMsg}</p>
               <button
-                onClick={() => { disconnect(); navigate('/pyramid', { replace: true }); }}
+                onClick={() => exitToLobby()}
                 className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10
                            text-white/70 font-semibold px-6 py-3 rounded-xl transition-all active:scale-95 text-sm"
               >
@@ -166,8 +68,18 @@ export function GameRoomPage() {
             <>
               <Loader size={32} className="text-purple-400 animate-spin" strokeWidth={2} />
               <p className="text-white/50 text-sm sm:text-base">
-                {status === 'connecting' ? t('game.connecting', lang) : t('game.loading', lang)}
+                {status === 'connected' ? t('game.loading', lang) : t('game.connecting', lang)}
               </p>
+              {(status === 'disconnected' || status === 'error' || status === 'replaced') && (
+                <button
+                  onClick={reconnectNow}
+                  className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white font-bold px-6 py-3
+                             rounded-xl transition-all active:scale-95 text-sm"
+                >
+                  <RotateCcw size={16} strokeWidth={2.5} />
+                  {t('game.rejoin', lang)}
+                </button>
+              )}
             </>
           )}
         </div>
@@ -175,40 +87,14 @@ export function GameRoomPage() {
     );
   }
 
-  if (status === 'disconnected' || status === 'error') {
-    return (
-      <div className="min-h-svh flex flex-col bg-[#0a0a0f]">
-        <GameNavbar />
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 px-4">
-          <p className="text-white/60 text-center text-base sm:text-lg">{t('game.connection_lost', lang)}</p>
-          <p className="text-white/40 text-center text-sm">{t('game.reconnecting', lang)}</p>
-          <div className="flex gap-3 mt-2">
-            <button
-              onClick={handleRejoin}
-              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white font-bold px-6 py-3
-                         rounded-xl transition-all active:scale-95"
-            >
-              <RotateCcw size={16} strokeWidth={2.5} />
-              {t('game.rejoin', lang)}
-            </button>
-            <button
-              onClick={() => { clearSession(); disconnect(); navigate('/pyramid', { replace: true }); }}
-              className="bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 font-semibold px-6 py-3
-                         rounded-xl transition-all active:scale-95"
-            >
-              {t('game.back_to_lobby', lang)}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const banner = <ConnectionBanner status={status} onRetry={reconnectNow} />;
 
   /* ── Lobby (waiting room) ───────────────────────────────── */
   if (room.status === 'lobby') {
     return (
       <div className="min-h-svh flex flex-col bg-[#0a0a0f] bg-grid">
-        <GameNavbar roomCode={room.room_code} onLeave={handleLeave} />
+        {banner}
+        <GameNavbar roomCode={room.room_code} onLeave={leave} />
 
         <main className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 flex flex-col gap-6 sm:gap-8">
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 lg:gap-8 flex-1">
@@ -300,7 +186,8 @@ export function GameRoomPage() {
   if (gameFinished) {
     return (
       <div className="min-h-svh flex flex-col bg-[#0a0a0f] bg-grid">
-        <GameNavbar roomCode={room.room_code} onLeave={handleLeave} />
+        {banner}
+        <GameNavbar roomCode={room.room_code} onLeave={leave} />
         <main className="flex-1 flex flex-col items-center justify-center gap-6 px-4">
           <div className="text-center fade-up">
             <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-purple-600 to-violet-800
@@ -333,7 +220,7 @@ export function GameRoomPage() {
               {lang === 'es' ? 'Jugar de nuevo' : 'Play again'}
             </button>
             <button
-              onClick={handleLeave}
+              onClick={leave}
               className="w-full flex items-center justify-center gap-2
                          bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 font-semibold
                          px-8 py-3 rounded-xl transition-all active:scale-95 text-sm"
@@ -349,7 +236,8 @@ export function GameRoomPage() {
   /* ── Playing ────────────────────────────────────────────── */
   return (
     <div className="min-h-svh flex flex-col bg-[#0a0a0f] bg-grid">
-      <GameNavbar roomCode={room.room_code} onLeave={handleLeave} />
+      {banner}
+      <GameNavbar roomCode={room.room_code} onLeave={leave} />
 
       <main className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6
                        flex flex-col gap-4 sm:gap-5">

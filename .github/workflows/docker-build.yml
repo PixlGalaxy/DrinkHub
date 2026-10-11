@@ -11,7 +11,33 @@ on:
     types: [created]
 
 jobs:
+  backend-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: 📂 Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: 🟢 Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: 📦 Install backend dependencies
+        run: npm ci
+
+      - name: 🔎 Typecheck
+        run: npm run typecheck
+
+      - name: 🧪 Test
+        run: npm test
+
   docker:
+    needs: backend-test
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -64,9 +64,11 @@ export function PlayerList({ players, currentPlayerId, viewerId, compact = false
               {player.is_host && (
                 <Crown size={14} className="text-yellow-400/70" strokeWidth={2} />
               )}
-              {player.is_connected
-                ? <Wifi size={11} className="text-emerald-400/60" strokeWidth={2} />
-                : <WifiOff size={11} className="text-red-400/60" strokeWidth={2} />
+              {player.presence === 'reconnecting'
+                ? <Wifi size={11} className="text-amber-400/80 animate-pulse" strokeWidth={2} />
+                : player.is_connected
+                  ? <Wifi size={11} className="text-emerald-400/60" strokeWidth={2} />
+                  : <WifiOff size={11} className="text-red-400/60" strokeWidth={2} />
               }
             </div>
           </div>

@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Play, Trash2, Users, ChevronRight, Loader, Hourglass, RotateCcw } from 'lucide-react';
-import { useWebSocket } from '../../shared/hooks/useWebSocket';
+import { useCallback } from 'react';
+import { Play, Trash2, Users, ChevronRight, Loader, Hourglass, SkipForward } from 'lucide-react';
+import { useGameRoom } from '../../shared/hooks/useGameRoom';
 import { useClearSEO } from '../../shared/hooks/useClearSEO';
 import type { RoomState } from '../../shared/types';
 import { GameNavbar } from '../navbar/GameNavbar';
@@ -9,148 +8,36 @@ import { RoomCode } from '../components/RoomCode';
 import { PlayerList } from '../components/PlayerList';
 import { PlayingCard, CardDeck } from '../components/PlayingCard';
 import { ActiveRules } from '../components/ActiveRules';
+import { ConnectionBanner } from '../../shared/components/ConnectionBanner';
 import { useLanguage } from '../../shared/i18n/useLanguage';
 import { t } from '../../shared/i18n/translations';
 
-const SESSION_KEY = 'dh_active_session';
-
-type LocationState = {
-  action: 'create' | 'join';
-  playerName: string;
-  roomCode?: string;
-  gameId: string;
-};
-
-type StoredSession = {
-  roomCode: string;
-  playerName: string;
-  gameId: string;
-};
-
-function saveSession(session: StoredSession) {
-  try {
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-  } catch {}
-}
-
-function loadSession(): StoredSession | null {
-  try {
-    const raw = localStorage.getItem(SESSION_KEY);
-    return raw ? JSON.parse(raw) as StoredSession : null;
-  } catch {
-    return null;
-  }
-}
-
-function clearSession() {
-  try {
-    localStorage.removeItem(SESSION_KEY);
-  } catch {}
-}
-
 export function GameRoomPage() {
   useClearSEO();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const passedState = location.state as LocationState | null;
   const [lang] = useLanguage();
-
-  const [state] = useState<LocationState | null>(() => {
-    if (passedState) return passedState;
-    const stored = loadSession();
-    if (stored) {
-      return {
-        action: 'join',
-        playerName: stored.playerName,
-        roomCode: stored.roomCode,
-        gameId: stored.gameId,
-      };
-    }
-    return null;
+  const { entry, room, errorMsg, status, send, leave, exitToLobby, reconnectNow } = useGameRoom<RoomState>({
+    slug: 'sipitordipit',
+    gameId: 'sipit-or-dipit',
+    lobbyPath: '/sipit-or-dipit',
+    sessionKey: 'dh_active_session',
   });
-
-  const { connect, disconnect, send, on, status } = useWebSocket();
-  const [room, setRoom] = useState<RoomState | null>(null);
-  const [errorMsg, setErrorMsg] = useState('');
-  const actionSent = useRef(false);
-
-  useEffect(() => {
-    if (!state) navigate('/sipit-or-dipit', { replace: true });
-  }, [state, navigate]);
-
-  const handleLeave = useCallback(() => {
-    disconnect();
-    navigate('/sipit-or-dipit', { replace: true });
-  }, [disconnect, navigate]);
-
-  const handleRejoin = useCallback(() => {
-    if (!state) return;
-    actionSent.current = false;
-    setErrorMsg('');
-    connect();
-  }, [state, connect]);
 
   const handleDelete = useCallback(() => send({ type: 'delete_room' }), [send]);
   const handleStartGame = useCallback(() => send({ type: 'start_game' }), [send]);
   const handleDrawCard = useCallback(() => send({ type: 'draw_card' }), [send]);
   const handleRevealCard = useCallback(() => send({ type: 'reveal_card' }), [send]);
   const handleNextTurn = useCallback(() => send({ type: 'next_turn' }), [send]);
+  const handleSkipTurn = useCallback(() => send({ type: 'skip_turn' }), [send]);
 
-  useEffect(() => {
-    on('room_state', (msg) => {
-      const data = msg as unknown as RoomState & { type: string };
-      setRoom(data);
-      setErrorMsg('');
-
-      if (state) {
-        saveSession({
-          roomCode: data.room_code,
-          playerName: state.playerName,
-          gameId: data.game_id,
-        });
-      }
-    });
-    on('error', (msg) => {
-      const errorMessage = (msg.message as string) || t('game.error.generic', lang);
-      if (errorMessage.includes('Room not found')) {
-        clearSession();
-        disconnect();
-        navigate('/sipit-or-dipit', { replace: true, state: { roomNotFound: errorMessage } });
-      } else {
-        setErrorMsg(errorMessage);
-      }
-    });
-    on('room_deleted', () => {
-      disconnect();
-      clearSession();
-      navigate('/sipit-or-dipit', { replace: true, state: { deleted: true } });
-    });
-  }, [on, disconnect, navigate, state, lang]);
-
-  useEffect(() => {
-    if (!state) return;
-    connect();
-    return () => { disconnect(); };
-  }, [state, connect, disconnect]);
-
-  useEffect(() => {
-    if (status !== 'connected' || !state || actionSent.current) return;
-    actionSent.current = true;
-    if (state.action === 'create') {
-      send({ type: 'create_room', player_name: state.playerName, game_id: state.gameId });
-    } else {
-      send({ type: 'join_room', room_code: state.roomCode, player_name: state.playerName, game_id: state.gameId });
-    }
-  }, [status, state, send]);
-
-  if (!state) return null;
+  if (!entry) return null;
 
   const isMyTurn = room ? room.viewer_id === room.current_player_id : false;
   const isHost = room ? room.viewer_id === room.host_id : false;
   const connectedPlayers = room?.players.filter(p => p.is_connected) ?? [];
+  const banner = <ConnectionBanner status={status} onRetry={reconnectNow} />;
 
   /* ─────────────── Connecting / loading ─────────────── */
-  if (!room || status === 'connecting' || status === 'idle') {
+  if (!room) {
     return (
       <div className="min-h-svh flex flex-col bg-[#0a0a0f]">
         <GameNavbar />
@@ -159,7 +46,7 @@ export function GameRoomPage() {
             <>
               <p className="text-red-400 text-center text-sm sm:text-base max-w-xs">{errorMsg}</p>
               <button
-                onClick={() => { disconnect(); navigate('/sipit-or-dipit', { replace: true }); }}
+                onClick={() => exitToLobby()}
                 className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10
                            text-white/70 font-semibold px-6 py-3 rounded-xl transition-all active:scale-95 text-sm"
               >
@@ -170,43 +57,19 @@ export function GameRoomPage() {
             <>
               <Loader size={32} className="text-yellow-400 animate-spin" strokeWidth={2} />
               <p className="text-white/50 text-sm sm:text-base">
-                {status === 'connecting' ? t('game.connecting', lang) : t('game.loading', lang)}
+                {status === 'connected' ? t('game.loading', lang) : t('game.connecting', lang)}
               </p>
+              {(status === 'disconnected' || status === 'error' || status === 'replaced') && (
+                <button
+                  onClick={reconnectNow}
+                  className="bg-yellow-400 hover:bg-yellow-300 text-black font-bold px-6 py-3 rounded-xl
+                             transition-all active:scale-95 text-sm"
+                >
+                  {t('game.rejoin', lang)}
+                </button>
+              )}
             </>
           )}
-        </div>
-      </div>
-    );
-  }
-
-  if (status === 'disconnected' || status === 'error') {
-    return (
-      <div className="min-h-svh flex flex-col bg-[#0a0a0f]">
-        <GameNavbar />
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 px-4">
-          <p className="text-white/60 text-center text-base sm:text-lg">{t('game.connection_lost', lang)}</p>
-          <p className="text-white/40 text-center text-sm">{t('game.reconnecting', lang)}</p>
-          <div className="flex gap-3 mt-2">
-            <button
-              onClick={handleRejoin}
-              className="flex items-center gap-2 bg-yellow-400 hover:bg-yellow-300 text-black font-bold px-6 py-3
-                         rounded-xl transition-all active:scale-95"
-            >
-              <RotateCcw size={16} strokeWidth={2.5} />
-              {t('game.rejoin', lang)}
-            </button>
-            <button
-              onClick={() => {
-                clearSession();
-                disconnect();
-                navigate('/sipit-or-dipit', { replace: true });
-              }}
-              className="bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 font-semibold px-6 py-3
-                         rounded-xl transition-all active:scale-95"
-            >
-              {t('game.back_to_lobby', lang)}
-            </button>
-          </div>
         </div>
       </div>
     );
@@ -216,7 +79,8 @@ export function GameRoomPage() {
   if (room.status === 'lobby') {
     return (
       <div className="min-h-svh flex flex-col bg-[#0a0a0f] bg-grid">
-        <GameNavbar roomCode={room.room_code} onLeave={handleLeave} />
+        {banner}
+        <GameNavbar roomCode={room.room_code} onLeave={leave} />
 
         <main className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10
                         flex flex-col gap-6 sm:gap-8">
@@ -316,7 +180,8 @@ export function GameRoomPage() {
   /* ─────────────── Game Playing ─────────────── */
   return (
     <div className="min-h-svh flex flex-col bg-[#0a0a0f] bg-grid">
-      <GameNavbar roomCode={room.room_code} onLeave={handleLeave} />
+      {banner}
+      <GameNavbar roomCode={room.room_code} onLeave={leave} />
 
       <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6
                       flex flex-col gap-4 sm:gap-5">
@@ -446,6 +311,26 @@ export function GameRoomPage() {
                 <p className="text-center text-white/30 text-sm py-2">
                   {t('game.tap_to_draw', lang)}
                 </p>
+              )}
+
+              {!isMyTurn && room.current_player_presence === 'away' && (
+                <p className="text-center text-amber-300/80 text-sm mb-2">
+                  {t('game.player_away', lang, { name: room.current_player_name })}
+                </p>
+              )}
+
+              {!isMyTurn && room.can_skip && (
+                <button
+                  onClick={handleSkipTurn}
+                  className={`w-full flex items-center justify-center gap-2 font-semibold px-5 py-3 rounded-xl
+                    text-sm transition-all active:scale-[0.98] mb-2
+                    ${room.current_player_presence === 'away'
+                      ? 'bg-amber-400 hover:bg-amber-300 text-black'
+                      : 'bg-white/5 hover:bg-white/10 border border-white/10 text-white/60'}`}
+                >
+                  <SkipForward size={16} strokeWidth={2.5} />
+                  {t('game.skip_turn', lang)}
+                </button>
               )}
 
               {!isMyTurn && (

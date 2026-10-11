@@ -17,8 +17,12 @@ export interface Player {
   id: string;
   name: string;
   is_host: boolean;
+  /** False only once the player has been gone long enough to count as away. */
   is_connected: boolean;
+  presence?: Presence;
 }
+
+export type Presence = 'online' | 'reconnecting' | 'away';
 
 export interface ActiveRule {
   card_id: string;
@@ -42,9 +46,13 @@ export interface RoomState {
   active_rules: ActiveRule[];
   deck_remaining: number;
   viewer_id: string;
+  version?: number;
+  current_player_presence?: Presence | null;
+  /** Whether the viewer may skip the current turn (current player is away, or viewer is host). */
+  can_skip?: boolean;
 }
 
-export type WsStatus = 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error';
+export type WsStatus = 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error' | 'replaced';
 
 // ── Pyramid ──────────────────────────────────────────────────────────────────
 

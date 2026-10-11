@@ -1,0 +1,17 @@
+services:
+  drinkhub:
+    image: ghcr.io/pixlgalaxy/drinkhub:latest
+    build: .
+    ports:
+      - "8080:80"
+    environment:
+      # Optional: set to keep sessions valid across volume resets.
+      # If empty, a secret is generated once and stored in the volume.
+      SESSION_SECRET: ""
+    volumes:
+      # Everything the server stores: session secret + one folder/DB per game
+      - drinkhub-storage:/app/backend/storage
+    restart: unless-stopped
+
+volumes:
+  drinkhub-storage:
