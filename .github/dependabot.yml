@@ -7,9 +7,13 @@ updates:
     schedule:
       interval: "daily"
     groups:
+      # Minor/patch grouped into one PR (auto-merged); majors open separate PRs for manual review
       frontend-deps:
         patterns:
           - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   # Backend (Python / pip)
   - package-ecosystem: "pip"
@@ -18,9 +22,13 @@ updates:
     schedule:
       interval: "daily"
     groups:
+      # Minor/patch grouped into one PR (auto-merged); majors open separate PRs for manual review
       backend-deps:
         patterns:
           - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   # Docker base images
   - package-ecosystem: "docker"
