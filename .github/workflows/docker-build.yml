@@ -61,6 +61,7 @@ jobs:
           echo "IMAGE_NAME=drinkhub" >> $GITHUB_ENV
 
       - name: 🔑 Log in to GitHub Container Registry
+        if: github.event_name != 'pull_request'
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
@@ -71,7 +72,8 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
-          push: true
+          # Pull requests (Dependabot included) only validate the build
+          push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ghcr.io/${{ env.REPOSITORY_OWNER }}/${{ env.IMAGE_NAME }}:latest
             ghcr.io/${{ env.REPOSITORY_OWNER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}

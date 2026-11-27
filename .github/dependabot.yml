@@ -6,6 +6,11 @@ updates:
     open-pull-requests-limit: 15
     schedule:
       interval: "daily"
+    # Wait before proposing a freshly published version: hijacked releases
+    # (Axios, Shai-Hulud, ChainDrop...) are usually caught and pulled within days.
+    # Security updates are not delayed by this.
+    cooldown:
+      default-days: 7
     groups:
       # Minor/patch grouped into one PR (auto-merged); majors open separate PRs for manual review
       frontend-deps:
@@ -15,12 +20,17 @@ updates:
           - "minor"
           - "patch"
 
-  # Backend (Python / pip)
-  - package-ecosystem: "pip"
+  # Backend (Node / npm)
+  - package-ecosystem: "npm"
     directory: "/backend"
     open-pull-requests-limit: 15
     schedule:
       interval: "daily"
+    # Wait before proposing a freshly published version: hijacked releases
+    # (Axios, Shai-Hulud, ChainDrop...) are usually caught and pulled within days.
+    # Security updates are not delayed by this.
+    cooldown:
+      default-days: 7
     groups:
       # Minor/patch grouped into one PR (auto-merged); majors open separate PRs for manual review
       backend-deps:
@@ -36,6 +46,11 @@ updates:
     open-pull-requests-limit: 5
     schedule:
       interval: "weekly"
+    # Wait before proposing a freshly published version: hijacked releases
+    # (Axios, Shai-Hulud, ChainDrop...) are usually caught and pulled within days.
+    # Security updates are not delayed by this.
+    cooldown:
+      default-days: 7
 
   # GitHub Actions workflows
   - package-ecosystem: "github-actions"
@@ -43,3 +58,8 @@ updates:
     open-pull-requests-limit: 5
     schedule:
       interval: "weekly"
+    # Wait before proposing a freshly published version: hijacked releases
+    # (Axios, Shai-Hulud, ChainDrop...) are usually caught and pulled within days.
+    # Security updates are not delayed by this.
+    cooldown:
+      default-days: 7
